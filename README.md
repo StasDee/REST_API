@@ -2,6 +2,8 @@
 
 A robust, production-grade Python REST API client designed to interact with MockAPI. This project demonstrates advanced concepts in API consumption, including exponential backoff retries, session management, and eventual consistency handling.
 
+!!!To run, rename env_example.txt file to .env, you may replace api token with your one!!!
+
 ## 🚀 Features
 
 - **Robust Retry Mechanism**: Custom decorator using exponential backoff to handle 500-series errors and network timeouts.
