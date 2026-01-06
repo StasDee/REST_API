@@ -1,0 +1,2 @@
+BASE_URL=https://695bec3b1d8041d5eeb8fde4.mockapi.io/api/v1/users
+API_TOKEN=interview-token-abc123
