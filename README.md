@@ -104,7 +104,7 @@ Create a `.env` file in the project root with at least the following variable:
 ```env
 BASE_URL=https://your_mockapi_address_here.mockapi.io/api/v1/users
 API_TOKEN=your_token_here
-
+```
 
 ### 4. Run the main scenario
 ```bash
@@ -124,3 +124,4 @@ with UsersApiClient() as api:
     print(created)
 
 ```
+
