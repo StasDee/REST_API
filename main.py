@@ -1,8 +1,8 @@
 import logging
 import colorlog
 from time import sleep
-from client import UsersApiClient
-from factory import UserFactory
+from mockapi_client.client import UsersApiClient
+from mockapi_client.factory import UserFactory
 
 handler = colorlog.StreamHandler()
 formatter = colorlog.ColoredFormatter(
