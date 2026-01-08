@@ -1,30 +1,41 @@
 import logging
 import colorlog
 
-def get_logger(name: str = __name__, level: int = logging.INFO) -> logging.Logger:
-    """
-    Returns a colorized logger instance that can be used across the project.
-    """
+
+def get_logger(name: str = __name__, level: int = None) -> logging.Logger:
     logger = logging.getLogger(name)
 
-    if not logger.hasHandlers():
+    # If no level is provided, it inherits from the parent (the root logger)
+    # This allows pytest --log-cli-level=DEBUG to control everything.
+    if level:
+        logger.setLevel(level)
+    elif logger.level == logging.NOTSET:
+        logger.setLevel(logging.DEBUG)
+
+    # 1. Add this block to strictly silence noise
+    for noisy_logger in ["urllib3", "requests", "charset_normalizer"]:
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+        logging.getLogger(noisy_logger).propagate = False
+
+    # Avoid adding multiple handlers if the logger is reused
+    if not logger.handlers:
         handler = colorlog.StreamHandler()
+
+        # Use a simpler format for Pytest to avoid double-formatting
+        fmt = "%(log_color)s[%(levelname)s] %(message)s"
+
         formatter = colorlog.ColoredFormatter(
-            "%(log_color)s[%(levelname)s] %(message)s",
+            fmt,
             log_colors={
-                "DEBUG": "cyan",
-                "INFO": "green",
-                "WARNING": "yellow",
-                "ERROR": "red",
-                "CRITICAL": "bold_red",
+                "DEBUG": "cyan", "INFO": "green",
+                "WARNING": "yellow", "ERROR": "red", "CRITICAL": "bold_red",
             }
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        logger.setLevel(level)
 
-    # Silence noisy third-party logs
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
+        # Prevent logs from bubbling up to the root logger
+        # which would cause double-logging in Pytest
+        logger.propagate = False
 
     return logger
