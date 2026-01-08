@@ -1,8 +1,12 @@
+from mockapi_client.logger import get_logger
 import requests
+from time import sleep
 from typing import Dict, List, Optional, Any
 from requests.exceptions import HTTPError
 from .decorators import retry_on_failure
 from .config import BASE_URL, DEFAULT_TIMEOUT, TOKEN
+
+logger = get_logger(__name__)
 
 
 class UsersApiClient:
@@ -61,3 +65,21 @@ class UsersApiClient:
     @retry_on_failure()
     def list_users(self) -> List[Dict]:
         return self._request("GET") or []
+
+    def get_user_status(self, user_id):
+        url = f"{self.base_url}/{user_id}"
+        resp = self.session.get(url)
+        return resp.status_code
+
+    def wait_until_deleted(self, user_id, retries=5, delay=1):
+        """
+        Polls the API until the user is no longer found.
+        Returns True if deleted, False otherwise.
+        """
+        for i in range(retries):
+            # Reuse your existing status check method
+            if self.get_user_status(user_id) in [404, 500]:
+                return True
+            logger.debug(f"Waiting for deletion verification for {user_id}... attempt {i + 1}")
+            sleep(delay)
+        return False
