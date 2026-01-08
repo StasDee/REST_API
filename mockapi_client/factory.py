@@ -24,3 +24,9 @@ class UserFactory:
             "name": username,
             "email": f"{username}@example.com"
         }
+
+    def reset(self):
+        """
+        Clear the history of used names.
+        """
+        self._used_names.clear()
