@@ -12,7 +12,7 @@ def get_logger(name: str = __name__, level: int = None) -> logging.Logger:
     elif logger.level == logging.NOTSET:
         logger.setLevel(logging.DEBUG)
 
-    # 1. Add this block to strictly silence noise
+    # Add this block to strictly silence noise
     for noisy_logger in ["urllib3", "requests", "charset_normalizer"]:
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
         logging.getLogger(noisy_logger).propagate = False
@@ -39,3 +39,4 @@ def get_logger(name: str = __name__, level: int = None) -> logging.Logger:
         logger.propagate = False
 
     return logger
+
