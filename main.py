@@ -1,11 +1,8 @@
-import logging
-from time import sleep
 from mockapi_client.logger import get_logger
 from mockapi_client.client import UsersApiClient
 from mockapi_client.factory import UserFactory
 
-logger = get_logger(__name__, level=logging.DEBUG)
-
+logger = get_logger(__name__)
 
 def user_scenario(
         api: UsersApiClient,
@@ -18,10 +15,10 @@ def user_scenario(
     created_ids = []
 
     # 1. CREATE & VERIFY (GET)
-    logger.info("-" * 50)
+    logger.info("-" * 60)
     logger.info(f"--- Step 1: Creating and verifying {count} users ---")
     for _ in range(count):
-        logger.info("-" * 50)
+        logger.info("-" * 60)
         payload = factory.create_user_payload()
         logger.info(f"Generated payload for user: {payload}")
 
@@ -36,9 +33,9 @@ def user_scenario(
         logger.info(f"Fetched user: {fetched}")
         assert fetched and fetched["name"] == payload["name"], f"Verification failed for {user_id}"
         logger.info(f"Creation - Fetching success")
-    logger.info("-" * 50)
+    logger.info("-" * 60)
     logger.info("All users successfully created and verified.")
-    logger.info("-" * 50)
+    logger.info("-" * 60)
 
     # 2. PATCH (Partial Update)
     if created_ids:
@@ -51,40 +48,42 @@ def user_scenario(
         logger.info(f"User {target_id} successfully renamed to name: renamed_user")
 
     # 3. DELETE (Cleanup)
-    logger.info("-" * 50)
+    logger.info("-" * 60)
     logger.info("--- Step 3: Deleting all users ---")
+
+    failed_deletions = []
+
     for user_id in created_ids:
         logger.debug(f"Deleting user {user_id}...")
         api.delete_user(user_id)
-        # Pause to help mockapi process the deletion
-        sleep(0.5)
 
-    # 4. FINAL VERIFICATION (Polling)
-    logger.info("-" * 50)
-    logger.info("--- Step 4: Final verification ---")
-    # We use a loop here because MockAPI is eventually consistent
-    for attempt in range(5):
-        remaining = api.list_users()
-        if not remaining:
-            logger.info("Cleanup verified: No users remaining.")
-            logger.info("-" * 50)
-            return
-        logger.warning(f"Cleanup check {attempt + 1}: {len(remaining)} users still exist. Retrying...")
-        sleep(2)
-    logger.info("-" * 50)
-    raise RuntimeError("Cleanup failed: Users still present in the system.")
+        # Verify
+        if api.wait_until_deleted(user_id):
+            logger.debug(f"Successfully verified deletion of user {user_id}")
+        else:
+            logger.error(f"Timeout deleting for user: {user_id}")
+            failed_deletions.append(user_id)
+
+    if failed_deletions:
+        raise Exception(f"Cleanup failed for: {failed_deletions}")
+
+    logger.info("-" * 60)
+    logger.info("Cleanup completed successfully")
 
 
 def main():
     factory = UserFactory()
 
-    # We use the context manager (with) to ensure the session closes properly
     with UsersApiClient() as api:
         try:
-            user_scenario(api, factory, count=5)  # Restored the '5' users logic
-            logging.info("Task completed successfully!")
+            user_scenario(api, factory, count=5)
+            logger.info("Task completed successfully!")
         except Exception as e:
-            logging.error(f"Scenario failed: {e}")
+            logger.error(f"Scenario failed: {e}")
+        finally:
+            # This runs even if an exception was raised
+            factory.reset()
+            logger.debug("UserFactory memory cleared")
 
 
 if __name__ == "__main__":
