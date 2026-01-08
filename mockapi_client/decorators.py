@@ -1,10 +1,9 @@
-import logging
 from functools import wraps
 from requests.exceptions import HTTPError, Timeout, ConnectionError
 import time
 from .logger import get_logger
 
-logger = get_logger(__name__, level=logging.INFO)
+logger = get_logger(__name__)
 
 
 def retry_on_failure(num_retries=3, wait_seconds=2):
@@ -21,7 +20,7 @@ def retry_on_failure(num_retries=3, wait_seconds=2):
                 try:
                     res = func(*args, **kwargs)
                     if attempt > 0:
-                        logger.info(f"Recovered after {attempt + 1} attempts")
+                        logger.info(f"Recovered on attempt {attempt + 1}")
                     return res
                 except (Timeout, ConnectionError, HTTPError) as e:
                     # Only retry on server errors (5xx); propagate 4xx immediately
@@ -38,7 +37,8 @@ def retry_on_failure(num_retries=3, wait_seconds=2):
                         f"Caught {type(e).__name__}: {e}. Retrying in {wait}s..."
                     )
                     time.sleep(wait)
-                    wait = min(wait * 2, 10)  # exponential backoff capped at 10s
+                    # exponential backoff capped at 10s
+                    wait = min(wait * 2, 10)
 
         return wrapper
 
