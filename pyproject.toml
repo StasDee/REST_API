@@ -11,8 +11,14 @@ license = { text = "MIT" }
 
 dependencies = [
     "requests>=2.31.0",
-    "python-dotenv>=1.0.0",
     "colorlog>=6.8.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-xdist>=3.0",
 ]
 
 [project.urls]
@@ -24,3 +30,13 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["mockapi_client"]
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -s -v --log-cli-level=DEBUG"
+testpaths = ["tests"]
+markers = [
+    "contract: mark a test as a contract test",
+    "scenario: mark a test as a scenario test"
+]
