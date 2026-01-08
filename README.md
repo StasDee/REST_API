@@ -1,13 +1,14 @@
 # MockAPI Users Management Client
 
-
-A production-grade Python REST API client designed to demonstrate robust API consumption patterns and clean software design. This project was built as **interview-level practice** for REST API automation and backend integration scenarios.
+A production-grade Python REST API client designed to demonstrate robust API consumption patterns and clean software
+design. This project was built as **interview-level practice** for REST API automation and backend integration
+scenarios.
 
 It focuses on correctness, resiliency, readability, and realism rather than shortcuts.
 
 ---
 
-##  Project Goals
+## Project Goals
 
 - **Practice Realistic Workflows:** Simulate full CRUD (Create, Read, Update, Delete) lifecycles.
 - **Resiliency:** Demonstrate professional-grade retry logic, timeouts, and error handling.
@@ -17,40 +18,53 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 
 ---
 
-##  Key Features
+## Key Features
 
-###  Robust Retry Mechanism
+### Robust Retry Mechanism
+
 - Custom retry decorator with configurable attempts and exponential backoff.
 - Logic specifically targets **recoverable failures**:
-  - Network connectivity issues.
-  - Request timeouts.
-  - HTTP 5xx (Server Error) responses.
+    - Network connectivity issues.
+    - Request timeouts.
+    - HTTP 5xx (Server Error) responses.
 
-###  Session Persistence
+### Session Persistence
+
 - Leverages `requests.Session` to provide:
-  - **Connection Pooling:** Reuses TCP connections to reduce latency.
-  - **Shared Headers:** Consistent Auth and Content-Type management.
-  - **Efficiency:** Significant reduction in overhead for high-frequency requests.
+    - **Connection Pooling:** Reuses TCP connections to reduce latency.
+    - **Shared Headers:** Consistent Auth and Content-Type management.
+    - **Efficiency:** Significant reduction in overhead for high-frequency requests.
 
-###  Eventual Consistency Handling
-- Intelligent verification systems that double-check resource states (e.g., verifying a deletion by re-querying the endpoint) to account for backend sync delays.
+### Automatic Resource Cleanup
 
-###  Environment-Based Configuration
+- Features a **Module-scoped Cleanup Registry** for Pytest.
+- Every resource created during a test suite is tracked and verified as deleted during the final teardown, ensuring no "
+  data leaking" in the test environment.
+
+### Environment-Based Configuration
+
 - Utilizes `.env` files for secrets and settings.
 - Zero hard-coded credentials, allowing for seamless switching between `Staging`, `QA`, and `Production` environments.
 
-###  Structured, Colorized Logging
+### Structured, Colorized Logging
+
 - Professional logging output via the `logging` library.
 - **Color-coded severity:** Instantly distinguish between `DEBUG`, `INFO`, and `ERROR`.
 - **Filtered Output:** Silences noisy third-party logs (like `urllib3`) to keep terminal output actionable.
 
-###  Deterministic Test Data Generation
+### Deterministic Test Data Generation
+
 - Integrated `UserFactory` for generating unique, collision-free user data.
 - Ideal for parallel test execution where data isolation is critical.
 
+### 🔍 Eventual Consistency Handling
+
+- Intelligent verification systems (polling) that confirm resource deletion by re-querying endpoints until a `404` or
+  `500` status is confirmed.
+
 ---
 
-##  Project Structure
+## Project Structure
 
 ```text
 .
@@ -61,6 +75,11 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 │   ├── decorators.py         # Retry and performance decorators
 │   ├── factory.py            # Test data and User generation logic
 │   └── logger.py             # Logging bridge and formatting
+├── tests/                    # Automation Suite
+│   ├── __init__.py           # Package initialization
+│   ├── conftest.py           # Shared fixtures (Registry, Client, Factory)
+│   ├── test_contract.py      # Parametrized CRUD/Contract tests
+│   └── test_scenario.py      # End-to-End user story scenarios
 ├── __init__.py               # Package initialization
 ├── .env                      # Environment variables (Sensitive)
 ├── .gitignore                # Standard Python git exclusions
@@ -69,7 +88,7 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 └── README.md                 # Project documentation
 ```
 
-##  Quick Start
+## Quick Start
 
 Follow these steps to get up and running with the MockAPI Users Management Client.
 
@@ -95,6 +114,7 @@ Then install the package in editable mode:
 ```bash
 pip install -e .
 ```
+
 Requires Python 3.9 or higher.
 
 ### 3. Configure environment
@@ -102,16 +122,43 @@ Requires Python 3.9 or higher.
 Create a `.env` file in the project root with at least the following variable:
 
 ```env
-BASE_URL=https://your_mockapi_address_here.mockapi.io/api/v1/users
-API_TOKEN=your_token_here - faked, not used in this service
+BASE_URL=https://<your_id>.mockapi.io/api/v1/users
+TOKEN=your_token_here
 ```
 
 ### 4. Run the main scenario
+
 ```bash
 python main.py
 ```
 
-### 5. Using the API client directly
+### 5. Execution Modes
+
+#### Option A: Standalone Script
+
+Runs from withing a project a linear demonstration of the user lifecycle (Create → Fetch → Patch → Delete)
+
+```bash
+python main.py
+```
+
+#### Option B: Pytest Suite (Recommended)
+
+The project includes a full automation suite with custom markers and module-scoped teardown.
+Run from withing a project all tests:
+
+```bash
+pytest
+```
+
+Run specific test categories:
+
+```bash
+pytest -m contract   # CRUD lifecycle tests (Parametrized)
+pytest -m scenario   # Complex user-story scenarios
+```
+
+### 6. Using the API client directly
 
 ```python
 from mockapi_client.client import UsersApiClient
@@ -122,7 +169,4 @@ with UsersApiClient() as api:
     user = factory.create_user_payload()
     created = api.create_user(user)
     print(created)
-
 ```
-
-
