@@ -68,31 +68,46 @@ data leakage in the test environment.
 
 ```text
 .
-├── core/                     # Domain logic (backend-style)
-│   ├── __init__.py
-│   ├── normalizers.py        # Normalize unstable API responses
-│   ├── validators.py         # Business & contract validation logic
-│   └── errors.py             # Domain-specific validation errors
-├── mockapi_client/           # Core library package
-│   ├── __init__.py           # Package initialization
-│   ├── client.py             # Main API Client logic & Session handling
-│   ├── config.py             # Pydantic/Dotenv configuration management
-│   ├── decorators.py         # Retry and performance decorators
-│   ├── factory.py            # Test data and User generation logic
-│   └── logger.py             # Logging bridge and formatting
-├── tests/                    # Automation Suite
-│   ├── __init__.py           # Package initialization
-│   ├── conftest.py           # Shared fixtures (Registry, Client, Factory)
-│   ├── test_contract.py      # Parametrized CRUD/Contract tests
-│   └── test_scenario.py      # End-to-End user story scenarios
-│   ├── test_user_contract.py # Parametrized CRUD/Contract tests
-│   └── test_user_scenario.py # End-to-End user story scenarios
-├── __init__.py               # Package initialization
-├── .env                      # Environment variables (Sensitive)
-├── .gitignore                # Standard Python git exclusions
-├── main.py                   # Entry point / Demonstration script
-├── pyproject.toml            # Build system and dependencies
-└── README.md                 # Project documentation
+├── core/                              # Domain logic (backend-style)
+│   ├── __init__.py                     # Package initialization
+│   ├── normalizers.py                  # Normalize unstable API responses
+│   ├── validators.py                   # Business & contract validation logic
+│   └── errors.py                       # Domain-specific validation errors
+│
+├── mockapi_client/                     # Core library package
+│   ├── __init__.py                     # Package initialization
+│   ├── client.py                        # Main API Client logic & Session handling (sync)
+│   ├── async_client.py                  # Async API client using httpx.AsyncClient
+│   ├── config.py                        # Pydantic/Dotenv configuration management
+│   ├── decorators.py                    # Retry and performance decorators (sync)
+│   ├── async_decorators.py              # Async retry and backoff decorators
+│   ├── factory.py                       # Test data and User generation logic
+│   └── logger.py                        # Logging bridge and formatting
+│
+├── tests/                               # Automation Suite
+│   ├── __init__.py                      # Package initialization
+│   ├── conftest.py                       # Shared fixtures (Registry, Client, Factory)
+│   ├── test_contract.py                  # Parametrized CRUD/Contract tests (sync)
+│   ├── test_scenario.py                  # End-to-End user story scenarios (sync)
+│   ├── test_user_contract.py             # Parametrized CRUD/Contract tests (sync)
+│   ├── test_user_scenario.py             # End-to-End user story scenarios (sync)
+│   ├── test_user_negative.py             # Negative / invalid input tests
+│   ├── test_user_async_contract.py       # Async CRUD/Contract tests
+│   ├── test_user_async_burst_create.py   # Async burst-load creation test
+│   ├── test_user_async_burst_workflow.py # Async burst multi-step workflow test
+│   ├── test_user_async_edge_single.py    # Async edge-case single-step tests
+│   ├── test_user_async_edge_workflow.py  # Async edge-case workflow tests
+│   ├── test_user_concurrent_async_creation.py  # Async parallel creation tests
+│   ├── test_user_concurrent_async_conflict.py  # Async conflict/race condition tests
+│   └── test_user_concurrency_threads.py        # Legacy threading-based concurrency tests
+│
+├── __init__.py                           # Package initialization
+├── .env                                  # Environment variables (Sensitive)
+├── .gitignore                            # Standard Python git exclusions
+├── main.py                               # Entry point / Demonstration script
+├── pyproject.toml                        # Build system and dependencies
+└── README.md                             # Project documentation
+
 ```
 
 ## Quick Start
@@ -232,60 +247,99 @@ This structure mirrors production backend testing patterns rather than tutorial-
 
 ## Test Organization
 
-The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style automation patterns**:
+The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style automation patterns**. This includes classic CRUD tests, negative/edge-case tests, scenario modeling, and new async & concurrency tests.
+
+---
 
 ### 1. Positive CRUD / Contract Tests
 
-- **File:** `test_user_contract.py`
+- **Files:** `test_user_contract.py`, `test_user_async_contract.py`
 - **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).  
 - **Fixtures used:** 
-  - `api_client` → provides a reusable API client for HTTP requests.
+  - `api_client` → provides a reusable synchronous API client.
+  - `async_api_client` → provides a reusable async API client.
   - `user_factory` → generates deterministic, valid user payloads.
   - `cleanup_registry` → tracks created users to delete them at module teardown.
-- **Markers:** `@pytest.mark.contract` to group contract tests.  
-
-Example workflow:
-1. Create a user.
-2. Fetch the created user.
-3. Patch the user.
-4. Verify each step passes contract validation.
-
----
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.asyncio` (for async tests).  
 
 ### 2. Negative / Edge-Case Tests
 
-- **File:** `test_user_negative.py`
-- **Purpose:** Verify that invalid or unexpected inputs are handled correctly by the API client, raising appropriate errors.  
-- **Fixtures used:** Same as above (`api_client`, `user_factory`, `cleanup_registry`) to maintain consistency.
-- **Markers:** `@pytest.mark.contract` to include them in contract test runs.
+- **Files:** `test_user_negative.py`, `test_user_async_edge_single.py`, `test_user_async_edge_workflow.py`
+- **Purpose:** Verify that invalid, unexpected, or uncommon user operations are handled correctly by the API client.  
+- **Fixtures used:** `api_client` / `async_api_client`, `user_factory`, `cleanup_registry`.
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.edge`, `@pytest.mark.asyncio` (for async tests).
 
-Examples:
-- Attempt to create users with invalid payloads.
-- Fetch non-existent users.
-- Patch users with invalid data.
+### 3. Scenario / Workflow Tests
+
+- **Files:** `test_scenario.py`, `test_user_scenario.py`, `test_user_async_burst_workflow.py`
+- **Purpose:** Model realistic end-to-end user workflows, combining multiple CRUD operations and multi-step async workflows.
+- **Markers:** `@pytest.mark.scenario`, `@pytest.mark.asyncio` (for async tests).
+- **Design:** Reuses normalization and validation logic from `core/` to keep tests thin and maintainable.
+
+### 4. Async Burst & Concurrency Tests
+
+These tests were added to simulate **high-load and parallel user operations**.
+
+#### 4.1 Async Burst Tests
+- **Files:**  
+  - `test_user_async_burst_create.py` → Create 20–50 users concurrently (burst load).  
+  - `test_user_async_burst_workflow.py` → Multi-step async burst workflow (create → patch → fetch → delete).  
+- **Purpose:** Simulate traffic spikes and verify backend stability under load.  
+- **Validation:**  
+  - All users created successfully.  
+  - IDs are unique.  
+  - Contract validation passes for all operations.  
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency` (burst), `@pytest.mark.edge` (multi-step workflow).  
+
+#### 4.2 Async Concurrency / Parallel Tests
+- **Files:**  
+  - `test_user_concurrent_async_creation.py` → Parallel creation of multiple users.  
+  - `test_user_concurrent_async_conflict.py` → Attempt to create multiple users with the **same email simultaneously** (race condition).  
+- **Purpose:** Ensure API handles parallel requests and respects unique constraints.  
+- **Validation:**  
+  - Unique IDs for all users.  
+  - Only one user created for duplicate emails.  
+  - Exceptions handled gracefully.  
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency`, `@pytest.mark.edge` (for conflict).  
+
+#### 4.3 Thread-Based Concurrency (Optional)
+- **File:** `test_user_concurrency_threads.py`  
+- **Purpose:** Legacy threading-based concurrency test for comparison with async execution.  
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.  
 
 ---
 
-### 3. Scenario Tests
+### 5. Fixtures
 
-- **Files:** `test_scenario.py`, `test_user_scenario.py`
-- **Purpose:** Model end-to-end user workflows, combining multiple CRUD operations to simulate realistic user stories.
-- **Markers:** `@pytest.mark.scenario` to separate scenario tests from contract tests.
-- **Design:** Reuses normalization and validation logic from the `core/` layer, keeping tests thin and maintainable.
-
----
-
-### 4. Fixtures
-
-- **`api_client`**: Reusable HTTP client for all tests.
-- **`user_factory`**: Generates unique user data for each test run.
-- **`cleanup_registry`**: Ensures that created users are deleted at the end of the test module, preventing data leakage.
+- **`api_client`**: Reusable synchronous HTTP client.  
+- **`async_api_client`**: Reusable async HTTP client (`httpx.AsyncClient`).  
+- **`user_factory`**: Generates unique user data for each test run.  
+- **`cleanup_registry`**: Ensures all created users are deleted at teardown to prevent data leakage.  
 
 ---
 
-This structure ensures:
+### 6. Markers and Execution Notes
 
-- **Separation of concerns**: Positive vs negative tests, scenarios, and client logic are clearly separated.
-- **Single source of truth**: Validation logic is centralized in `core/validators.py`.
-- **Readability & maintainability**: Each test file has a clear purpose and naming.
-- **Portfolio-level professionalism**: Reflects real-world backend testing architecture.
+- **Async tests:** `@pytest.mark.asyncio`  
+- **Contract tests:** `@pytest.mark.contract`  
+- **Concurrency tests:** `@pytest.mark.concurrency`  
+- **Edge-case / workflow tests:** `@pytest.mark.edge`  
+
+Async & Concurrency Excecution:
+
+```bash
+# Run all async and concurrency tests
+pytest -m "async or concurrency" -v -s
+
+# Parallel test execution using pytest-xdist
+pytest -m "async or concurrency" -n auto -v -s
+
+# Run only edge workflows
+pytest -m "edge" -v -s
+
+# Run only burst creation tests
+pytest -m "concurrency and contract" -v -s
+```
+Best Practices:
+
+Use -v -s for detailed logs.
