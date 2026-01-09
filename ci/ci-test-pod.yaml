@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rest-api-ci
+  labels:
+    app: rest-api-ci
+spec:
+  restartPolicy: Never
+  containers:
+    - name: rest-api-ci
+      image: your-dockerhub-username/rest-api-ci:latest
+      imagePullPolicy: Always
+      command: ["/bin/bash", "-c", "/app/ci/run-tests.sh"]
+      env:
+        - name: BASE_URL
+          value: "https://<your_id>.mockapi.io/api/v1/users"
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: mockapi-token
+              key: TOKEN
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "1"
+  restartPolicy: Never

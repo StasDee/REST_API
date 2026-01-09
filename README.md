@@ -68,31 +68,39 @@ data leakage in the test environment.
 
 ```text
 .
-├── core/                     # Domain logic (backend-style)
-│   ├── __init__.py
-│   ├── normalizers.py        # Normalize unstable API responses
-│   ├── validators.py         # Business & contract validation logic
-│   └── errors.py             # Domain-specific validation errors
-├── mockapi_client/           # Core library package
-│   ├── __init__.py           # Package initialization
-│   ├── client.py             # Main API Client logic & Session handling
-│   ├── config.py             # Pydantic/Dotenv configuration management
-│   ├── decorators.py         # Retry and performance decorators
-│   ├── factory.py            # Test data and User generation logic
-│   └── logger.py             # Logging bridge and formatting
-├── tests/                    # Automation Suite
-│   ├── __init__.py           # Package initialization
-│   ├── conftest.py           # Shared fixtures (Registry, Client, Factory)
-│   ├── test_contract.py      # Parametrized CRUD/Contract tests
-│   └── test_scenario.py      # End-to-End user story scenarios
-│   ├── test_user_contract.py # Parametrized CRUD/Contract tests
-│   └── test_user_scenario.py # End-to-End user story scenarios
-├── __init__.py               # Package initialization
-├── .env                      # Environment variables (Sensitive)
-├── .gitignore                # Standard Python git exclusions
-├── main.py                   # Entry point / Demonstration script
-├── pyproject.toml            # Build system and dependencies
-└── README.md                 # Project documentation
+├── core/                          # Domain logic (backend-style)
+│   ├── __init__.py                # Package initialization
+│   ├── normalizers.py             # Normalize unstable API responses
+│   ├── validators.py              # Business & contract validation logic
+│   └── errors.py                  # Domain-specific validation errors
+│
+├── mockapi_client/                # Core library package
+│   ├── __init__.py                # Package initialization
+│   ├── client.py                  # Main API Client logic & Session handling
+│   ├── config.py                  # Pydantic/Dotenv configuration management
+│   ├── decorators.py              # Retry and performance decorators
+│   ├── factory.py                 # Test data and User generation logic
+│   └── logger.py                  # Logging bridge and formatting
+│
+├── tests/                         # Automation Suite
+│   ├── __init__.py                # Package initialization
+│   ├── conftest.py                # Shared fixtures (Registry, Client, Factory)
+│   ├── test_contract.py           # Parametrized CRUD/Contract tests
+│   └── test_scenario.py           # End-to-End user story scenarios
+│   ├── test_user_contract.py      # Parametrized CRUD/Contract tests
+│   └── test_user_scenario.py      # End-to-End user story scenarios
+│
+│── ci/                            # CI/CD and containerized test setup
+│   ├── Dockerfile                 # Builds Docker image with uv virtual environment and project
+│   ├── run_tests.sh               # Shell script to run tests inside Docker / CI
+│   └── ci-test-pod.yaml           # Kubernetes manifest to run tests in a pod
+│
+├── __init__.py                    # Package initialization
+├── .env                           # Environment variables (Sensitive)
+├── .gitignore                     # Standard Python git exclusions
+├── main.py                        # Entry point / Demonstration script
+├── pyproject.toml                 # Build system and dependencies
+└── README.md                      # Project documentation
 ```
 
 ## Quick Start
@@ -106,23 +114,16 @@ git clone https://github.com/StasDee/REST_API.git
 cd REST_API
 ```
 
-### 2. Install dependencies
+### 2. Install dependencies (locally using uv)
 
 It is recommended to use a virtual environment:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate      # Linux / macOS
-.venv\Scripts\activate         # Windows
+python -m pip install --upgrade pip
+pip install uv==0.6.5
+
+uv -e .venv pip install -e .
 ```
-
-Then install the package in editable mode:
-
-```bash
-pip install -e .
-```
-
-Requires Python 3.9 or higher.
 
 ### 3. Configure environment
 
@@ -133,7 +134,7 @@ BASE_URL=https://<your_id>.mockapi.io/api/v1/users
 TOKEN=your_token_here
 ```
 
-### 4. Run the main scenario
+### 4. Running Tests
 
 ```bash
 python main.py
@@ -164,6 +165,37 @@ Run specific test categories:
 pytest -m contract   # CRUD lifecycle tests (Parametrized)
 pytest -m scenario   # Complex user-story scenarios
 ```
+
+- Locally via uv
+
+```bash
+uv -e .venv pytest -v -m "async or concurrency"
+```
+
+- Docker
+
+```bash
+# Build Docker image
+docker build -t rest_api_tests -f ci/Dockerfile .
+
+# Run tests with Docker
+docker run --rm rest_api_tests
+```
+
+- Kubernetes
+
+```bash
+# Apply test pod definition
+kubecl apply -f ci/ci-test-pod.yaml
+
+# Check pod logs
+kubectl logs -f rest-api-test
+```
+
+- GitHub CI
+  - GitHub Actions can build the Docker image, run tests, and report results automatically.
+  - Use .github/workflows/ci.yml to define workflow (not included in repo, optional).
+
 
 ### 6. Using the API client directly
 
@@ -278,6 +310,7 @@ Examples:
 ### 4. Fixtures
 
 - **`api_client`**: Reusable HTTP client for all tests.
+- **`async_api_client`** → async client (httpx.AsyncClient)
 - **`user_factory`**: Generates unique user data for each test run.
 - **`cleanup_registry`**: Ensures that created users are deleted at the end of the test module, preventing data leakage.
 
