@@ -229,3 +229,63 @@ Tests remain thin, readable, and resilient to rule changes.
 - **Backend-style automation** – no UI, no flakiness, focused on API correctness.
 
 This structure mirrors production backend testing patterns rather than tutorial-style test code.
+
+## Test Organization
+
+The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style automation patterns**:
+
+### 1. Positive CRUD / Contract Tests
+
+- **File:** `test_user_contract.py`
+- **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).  
+- **Fixtures used:** 
+  - `api_client` → provides a reusable API client for HTTP requests.
+  - `user_factory` → generates deterministic, valid user payloads.
+  - `cleanup_registry` → tracks created users to delete them at module teardown.
+- **Markers:** `@pytest.mark.contract` to group contract tests.  
+
+Example workflow:
+1. Create a user.
+2. Fetch the created user.
+3. Patch the user.
+4. Verify each step passes contract validation.
+
+---
+
+### 2. Negative / Edge-Case Tests
+
+- **File:** `test_user_negative.py`
+- **Purpose:** Verify that invalid or unexpected inputs are handled correctly by the API client, raising appropriate errors.  
+- **Fixtures used:** Same as above (`api_client`, `user_factory`, `cleanup_registry`) to maintain consistency.
+- **Markers:** `@pytest.mark.contract` to include them in contract test runs.
+
+Examples:
+- Attempt to create users with invalid payloads.
+- Fetch non-existent users.
+- Patch users with invalid data.
+
+---
+
+### 3. Scenario Tests
+
+- **Files:** `test_scenario.py`, `test_user_scenario.py`
+- **Purpose:** Model end-to-end user workflows, combining multiple CRUD operations to simulate realistic user stories.
+- **Markers:** `@pytest.mark.scenario` to separate scenario tests from contract tests.
+- **Design:** Reuses normalization and validation logic from the `core/` layer, keeping tests thin and maintainable.
+
+---
+
+### 4. Fixtures
+
+- **`api_client`**: Reusable HTTP client for all tests.
+- **`user_factory`**: Generates unique user data for each test run.
+- **`cleanup_registry`**: Ensures that created users are deleted at the end of the test module, preventing data leakage.
+
+---
+
+This structure ensures:
+
+- **Separation of concerns**: Positive vs negative tests, scenarios, and client logic are clearly separated.
+- **Single source of truth**: Validation logic is centralized in `core/validators.py`.
+- **Readability & maintainability**: Each test file has a clear purpose and naming.
+- **Portfolio-level professionalism**: Reflects real-world backend testing architecture.
