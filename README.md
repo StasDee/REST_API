@@ -39,7 +39,7 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 
 - Features a **Module-scoped Cleanup Registry** for Pytest.
 - Every resource created during a test suite is tracked and verified as deleted during the final teardown, ensuring no
-data leakage in the test environment.
+  data leakage in the test environment.
 
 ### Environment-Based Configuration
 
@@ -192,11 +192,13 @@ with UsersApiClient() as api:
     created = api.create_user(user)
     print(created)
 ```
+
 ---
 
 ## Architecture Overview
 
-This project demonstrates a backend-oriented API test automation architecture, focused on maintainability, scalability, and realistic production patterns.
+This project demonstrates a backend-oriented API test automation architecture, focused on maintainability, scalability,
+and realistic production patterns.
 
 The design intentionally separates responsibilities into clear layers:
 
@@ -213,11 +215,11 @@ Responsible only for HTTP communication and session handling.
 Contains all reusable logic shared across tests:
 
 - **Normalizers**
-  - Convert raw API responses into stable internal representations
-  - Handle missing fields, extra fields, and inconsistent formats
+    - Convert raw API responses into stable internal representations
+    - Handle missing fields, extra fields, and inconsistent formats
 - **Validators**
-  - Centralized business rules and contract validation
-  - Single source of truth for data correctness
+    - Centralized business rules and contract validation
+    - Single source of truth for data correctness
 
 This prevents rule duplication and ensures consistent validation across all test types.
 
@@ -226,11 +228,11 @@ This prevents rule duplication and ensures consistent validation across all test
 Tests orchestrate behavior rather than reimplement rules.
 
 - **Contract tests**
-  - Validate API responses against business rules
-  - Focus on data correctness and schema expectations
+    - Validate API responses against business rules
+    - Focus on data correctness and schema expectations
 - **Scenario tests**
-  - Model real user workflows (create → fetch → validate)
-  - Reuse the same normalization and validation logic
+    - Model real user workflows (create → fetch → validate)
+    - Reuse the same normalization and validation logic
 
 Tests remain thin, readable, and resilient to rule changes.
 
@@ -240,39 +242,43 @@ Tests remain thin, readable, and resilient to rule changes.
 
 - **Separation of concerns** – client, core logic, and tests are clearly separated.
 - **Single source of truth for validation** – all rules live in one place, tests reuse them.
-- **Defensive handling of real-world API inconsistencies** – normalization ensures unstable API responses do not break tests.
+- **Defensive handling of real-world API inconsistencies** – normalization ensures unstable API responses do not break
+  tests.
 - **Backend-style automation** – no UI, no flakiness, focused on API correctness.
 
 This structure mirrors production backend testing patterns rather than tutorial-style test code.
 
 ## Test Organization
 
-The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style automation patterns**. This includes classic CRUD tests, negative/edge-case tests, scenario modeling, and new async & concurrency tests.
+The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style
+automation patterns**. This includes classic CRUD tests, negative/edge-case tests, scenario modeling, and new async &
+concurrency tests.
 
 ---
 
 ### 1. Positive CRUD / Contract Tests
 
 - **Files:** `test_user_contract.py`, `test_user_async_contract.py`
-- **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).  
-- **Fixtures used:** 
-  - `api_client` → provides a reusable synchronous API client.
-  - `async_api_client` → provides a reusable async API client.
-  - `user_factory` → generates deterministic, valid user payloads.
-  - `cleanup_registry` → tracks created users to delete them at module teardown.
-- **Markers:** `@pytest.mark.contract`, `@pytest.mark.asyncio` (for async tests).  
+- **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).
+- **Fixtures used:**
+    - `api_client` → provides a reusable synchronous API client.
+    - `async_api_client` → provides a reusable async API client.
+    - `user_factory` → generates deterministic, valid user payloads.
+    - `cleanup_registry` → tracks created users to delete them at module teardown.
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.asyncio` (for async tests).
 
 ### 2. Negative / Edge-Case Tests
 
 - **Files:** `test_user_negative.py`, `test_user_async_edge_single.py`, `test_user_async_edge_workflow.py`
-- **Purpose:** Verify that invalid, unexpected, or uncommon user operations are handled correctly by the API client.  
+- **Purpose:** Verify that invalid, unexpected, or uncommon user operations are handled correctly by the API client.
 - **Fixtures used:** `api_client` / `async_api_client`, `user_factory`, `cleanup_registry`.
 - **Markers:** `@pytest.mark.contract`, `@pytest.mark.edge`, `@pytest.mark.asyncio` (for async tests).
 
 ### 3. Scenario / Workflow Tests
 
 - **Files:** `test_scenario.py`, `test_user_scenario.py`, `test_user_async_burst_workflow.py`
-- **Purpose:** Model realistic end-to-end user workflows, combining multiple CRUD operations and multi-step async workflows.
+- **Purpose:** Model realistic end-to-end user workflows, combining multiple CRUD operations and multi-step async
+  workflows.
 - **Markers:** `@pytest.mark.scenario`, `@pytest.mark.asyncio` (for async tests).
 - **Design:** Reuses normalization and validation logic from `core/` to keep tests thin and maintainable.
 
@@ -281,49 +287,55 @@ The `tests/` folder is structured to clearly separate different types of test ca
 These tests were added to simulate **high-load and parallel user operations**.
 
 #### 4.1 Async Burst Tests
-- **Files:**  
-  - `test_user_async_burst_create.py` → Create 20–50 users concurrently (burst load).  
-  - `test_user_async_burst_workflow.py` → Multi-step async burst workflow (create → patch → fetch → delete).  
-- **Purpose:** Simulate traffic spikes and verify backend stability under load.  
-- **Validation:**  
-  - All users created successfully.  
-  - IDs are unique.  
-  - Contract validation passes for all operations.  
-- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency` (burst), `@pytest.mark.edge` (multi-step workflow).  
+
+- **Files:**
+    - `test_user_async_burst_create.py` → Create 20–50 users concurrently (burst load).
+    - `test_user_async_burst_workflow.py` → Multi-step async burst workflow (create → patch → fetch → delete).
+- **Purpose:** Simulate traffic spikes and verify backend stability under load.
+- **Validation:**
+    - All users created successfully.
+    - IDs are unique.
+    - Contract validation passes for all operations.
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency` (burst),
+  `@pytest.mark.edge` (multi-step workflow).
 
 #### 4.2 Async Concurrency / Parallel Tests
-- **Files:**  
-  - `test_user_concurrent_async_creation.py` → Parallel creation of multiple users.  
-  - `test_user_concurrent_async_conflict.py` → Attempt to create multiple users with the **same email simultaneously** (race condition).  
-- **Purpose:** Ensure API handles parallel requests and respects unique constraints.  
-- **Validation:**  
-  - Unique IDs for all users.  
-  - Only one user created for duplicate emails.  
-  - Exceptions handled gracefully.  
-- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency`, `@pytest.mark.edge` (for conflict).  
+
+- **Files:**
+    - `test_user_concurrent_async_creation.py` → Parallel creation of multiple users.
+    - `test_user_concurrent_async_conflict.py` → Attempt to create multiple users with the **same email simultaneously
+      ** (race condition).
+- **Purpose:** Ensure API handles parallel requests and respects unique constraints.
+- **Validation:**
+    - Unique IDs for all users.
+    - Only one user created for duplicate emails.
+    - Exceptions handled gracefully.
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency`, `@pytest.mark.edge` (for
+  conflict).
 
 #### 4.3 Thread-Based Concurrency (Optional)
-- **File:** `test_user_concurrency_threads.py`  
-- **Purpose:** Legacy threading-based concurrency test for comparison with async execution.  
-- **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.  
+
+- **File:** `test_user_concurrency_threads.py`
+- **Purpose:** Legacy threading-based concurrency test for comparison with async execution.
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.
 
 ---
 
 ### 5. Fixtures
 
-- **`api_client`**: Reusable synchronous HTTP client.  
-- **`async_api_client`**: Reusable async HTTP client (`httpx.AsyncClient`).  
-- **`user_factory`**: Generates unique user data for each test run.  
-- **`cleanup_registry`**: Ensures all created users are deleted at teardown to prevent data leakage.  
+- **`api_client`**: Reusable synchronous HTTP client.
+- **`async_api_client`**: Reusable async HTTP client (`httpx.AsyncClient`).
+- **`user_factory`**: Generates unique user data for each test run.
+- **`cleanup_registry`**: Ensures all created users are deleted at teardown to prevent data leakage.
 
 ---
 
 ### 6. Markers and Execution Notes
 
-- **Async tests:** `@pytest.mark.asyncio`  
-- **Contract tests:** `@pytest.mark.contract`  
-- **Concurrency tests:** `@pytest.mark.concurrency`  
-- **Edge-case / workflow tests:** `@pytest.mark.edge`  
+- **Async tests:** `@pytest.mark.asyncio`
+- **Contract tests:** `@pytest.mark.contract`
+- **Concurrency tests:** `@pytest.mark.concurrency`
+- **Edge-case / workflow tests:** `@pytest.mark.edge`
 
 Async & Concurrency Excecution:
 
@@ -340,6 +352,7 @@ pytest -m "edge" -v -s
 # Run only burst creation tests
 pytest -m "concurrency and contract" -v -s
 ```
+
 Best Practices:
 
 Use -v -s for detailed logs.
