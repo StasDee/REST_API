@@ -219,5 +219,13 @@ Tests orchestrate behavior rather than reimplement rules.
 
 Tests remain thin, readable, and resilient to rule changes.
 
-
 ---
+
+## Design Principles
+
+- **Separation of concerns** – client, core logic, and tests are clearly separated.
+- **Single source of truth for validation** – all rules live in one place, tests reuse them.
+- **Defensive handling of real-world API inconsistencies** – normalization ensures unstable API responses do not break tests.
+- **Backend-style automation** – no UI, no flakiness, focused on API correctness.
+
+This structure mirrors production backend testing patterns rather than tutorial-style test code.
