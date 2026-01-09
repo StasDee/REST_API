@@ -38,8 +38,8 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 ### Automatic Resource Cleanup
 
 - Features a **Module-scoped Cleanup Registry** for Pytest.
-- Every resource created during a test suite is tracked and verified as deleted during the final teardown, ensuring no "
-  data leaking" in the test environment.
+- Every resource created during a test suite is tracked and verified as deleted during the final teardown, ensuring no
+data leakage in the test environment.
 
 ### Environment-Based Configuration
 
@@ -57,7 +57,7 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 - Integrated `UserFactory` for generating unique, collision-free user data.
 - Ideal for parallel test execution where data isolation is critical.
 
-### 🔍 Eventual Consistency Handling
+### Eventual Consistency Handling
 
 - Intelligent verification systems (polling) that confirm resource deletion by re-querying endpoints until a `404` or
   `500` status is confirmed.
@@ -136,7 +136,7 @@ python main.py
 
 #### Option A: Standalone Script
 
-Runs from withing a project a linear demonstration of the user lifecycle (Create → Fetch → Patch → Delete)
+Runs a linear demonstration of the user lifecycle (Create → Fetch → Patch → Delete)
 
 ```bash
 python main.py
@@ -145,7 +145,7 @@ python main.py
 #### Option B: Pytest Suite (Recommended)
 
 The project includes a full automation suite with custom markers and module-scoped teardown.
-Run from withing a project all tests:
+Run all tests from the project root:
 
 ```bash
 pytest
@@ -170,3 +170,46 @@ with UsersApiClient() as api:
     created = api.create_user(user)
     print(created)
 ```
+---
+
+## Architecture Overview
+
+This project demonstrates a backend-oriented API test automation architecture, focused on maintainability, scalability, and realistic production patterns.
+
+The design intentionally separates responsibilities into clear layers:
+
+### 1. Client Layer (`mockapi_client`)
+
+Responsible only for HTTP communication and session handling.
+
+- No assertions
+- No business logic
+- Thin, reusable API wrapper
+
+### 2. Core Layer (`core`)
+
+Contains all reusable logic shared across tests:
+
+- **Normalizers**
+  - Convert raw API responses into stable internal representations
+  - Handle missing fields, extra fields, and inconsistent formats
+- **Validators**
+  - Centralized business rules and contract validation
+  - Single source of truth for data correctness
+
+This prevents rule duplication and ensures consistent validation across all test types.
+
+### 3. Test Layer (`tests`)
+
+Tests orchestrate behavior rather than reimplement rules.
+
+- **Contract tests**
+  - Validate API responses against business rules
+  - Focus on data correctness and schema expectations
+- **Scenario tests**
+  - Model real user workflows (create → fetch → validate)
+  - Reuse the same normalization and validation logic
+
+Tests remain thin, readable, and resilient to rule changes.
+
+---

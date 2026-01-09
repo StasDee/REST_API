@@ -1,10 +1,40 @@
+import re
 from typing import List, Dict
 from core.normalizers import normalize_users  # reuse normalization
+
+# EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+EMAIL_REGEX = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
 
 
 class ValidationError(Exception):
     """Custom exception for validation failures."""
     pass
+
+
+def validate_user_id(user: dict) -> None:
+    user_id = user.get("id")
+
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise ValidationError("User id must be a non-empty string")
+
+
+def validate_user_email(user: dict) -> None:
+    email = user.get("email")
+    if not email or not isinstance(email, str):
+        raise ValidationError("Email is missing or not a string")
+
+    if not EMAIL_REGEX.match(email):
+        raise ValidationError(f"Invalid email format: {email}")
+
+
+def validate_user_name(user: dict) -> None:
+    name = user.get("name")
+
+    if name is None:
+        return  # name is optional
+
+    if not isinstance(name, str) or not name.strip():
+        raise ValidationError("Name must be a non-empty string if provided")
 
 
 def validate_user_email(user: dict) -> None:
@@ -22,18 +52,14 @@ def validate_user_email(user: dict) -> None:
         raise ValidationError(f"User {user.get('id')} has invalid email format: {email}")
 
 
-def validate_users(users: List[Dict]) -> None:
-    """
-    Validate a list of user dictionaries.
+def validate_users(users: list[dict]) -> None:
+    if not isinstance(users, list):
+        raise ValidationError("Users payload must be a list")
 
-    - Skips invalid items (non-dict)
-    - Validates each user using existing rules
-    - Raises ValidationError on first failure
-    """
+    for user in users:
+        if not isinstance(user, dict):
+            raise ValidationError("Each user must be a dict")
 
-    normalized = normalize_users(users)
-
-    for user in normalized:
-        # Validate individual fields
+        validate_user_id(user)
         validate_user_email(user)
-        # We can later add more validators, e.g., validate_user_name(user), validate_user_id(user)
+        validate_user_name(user)

@@ -1,0 +1,14 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+
+# IDE configs
+.idea/
+.vscode/
+
+# Secret environment variables
+.env
+
