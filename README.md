@@ -68,6 +68,11 @@ data leakage in the test environment.
 
 ```text
 .
+├── core/                     # Domain logic (backend-style)
+│   ├── __init__.py
+│   ├── normalizers.py        # Normalize unstable API responses
+│   ├── validators.py         # Business & contract validation logic
+│   └── errors.py             # Domain-specific validation errors
 ├── mockapi_client/           # Core library package
 │   ├── __init__.py           # Package initialization
 │   ├── client.py             # Main API Client logic & Session handling
@@ -80,6 +85,8 @@ data leakage in the test environment.
 │   ├── conftest.py           # Shared fixtures (Registry, Client, Factory)
 │   ├── test_contract.py      # Parametrized CRUD/Contract tests
 │   └── test_scenario.py      # End-to-End user story scenarios
+│   ├── test_user_contract.py # Parametrized CRUD/Contract tests
+│   └── test_user_scenario.py # End-to-End user story scenarios
 ├── __init__.py               # Package initialization
 ├── .env                      # Environment variables (Sensitive)
 ├── .gitignore                # Standard Python git exclusions
@@ -211,5 +218,6 @@ Tests orchestrate behavior rather than reimplement rules.
   - Reuse the same normalization and validation logic
 
 Tests remain thin, readable, and resilient to rule changes.
+
 
 ---
