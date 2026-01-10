@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from mockapi_client.client import UsersApiClient
 from mockapi_client.async_client import AsyncUsersApiClient
 from mockapi_client.factory import UserFactory
