@@ -1,12 +1,29 @@
 # MockAPI Users Management Client
 
 A production-grade Python REST API client designed to demonstrate robust API consumption patterns and clean software
-design. This project was built as **interview-level practice** for REST API automation and backend integration
+design.  
+This project was built as **interview-level practice** for REST API automation and backend integration
 scenarios.
 
 It focuses on correctness, resiliency, readability, and realism rather than shortcuts.
 
 ---
+
+## Who This Project Is For
+
+This repository is intended for:
+
+- Backend / API Automation Engineers preparing for senior-level interviews.
+- Engineers transitioning from UI automation to backend testing.
+- Developers wanting to demonstrate production-style API client design and test architecture.
+
+## Non-Goals
+
+- No UI testing (intentionally backend-focused).
+- No mocks or stubs (tests validate real API behavior).
+- No database-level assertions (black-box API testing).
+- MockAPI is intentionally treated as a flaky and inconsistent external dependency to realistically simulate
+  third-party API instability (timeouts, transient 5xx responses, eventual consistency).
 
 ## Project Goals
 
@@ -15,8 +32,53 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 - **Efficiency:** Use `requests.Session` for optimized HTTP communication.
 - **Clean Architecture:** Maintain a strict separation of concerns between logic, configuration, and data.
 - **Observability:** Implement production-style logging instead of basic print statements.
+- **This no-mock approach reflects real CI environments** where external dependencies are imperfect and tests must
+  tolerate latency, retries, and transient failures rather than relying solely on isolated mocks.
 
 ---
+
+## Trade-offs & Design Decisions
+
+This project intentionally makes explicit design choices to mirror real-world backend and API automation constraints.
+
+- **requests + httpx instead of a single HTTP library**
+  requests is used for synchronous flows due to its stability, readability, and ubiquity in backend systems.
+  httpx.AsyncClient is introduced separately to model modern async workloads and concurrency patterns.  
+  Keeping both allows side-by-side comparison without forcing async complexity into simple use cases.  
+  In real production systems, teams typically standardize on either sync or async execution;
+  both are included here explicitly for comparison, learning, and interview discussion rather than as a recommended
+  production default.
+
+- **No automatic schema generation (e.g., OpenAPI → models)**
+  Schemas are validated via explicit normalizers and validators rather than auto-generated models.
+  This reflects real-world APIs where schemas may be incomplete, outdated, or inconsistent, requiring defensive
+  handling rather than strict code generation.
+
+- **Custom retry logic instead of urllib3 retries**
+    Retry behavior is implemented via decorators to:
+
+    - Clearly control what is retried (timeouts, network errors, 5xx)
+
+    - Separate retry policy from transport implementation
+
+    - Apply the same retry strategy consistently across sync and async clients
+      This improves transparency and testability over implicit transport-level retries.
+    - In production systems, a mature library such as Tenacity would typically be preferred; this implementation
+    - is intentionally explicit and educational to demonstrate retry mechanics, observability, and control flow.
+
+- **Module-scoped cleanup registry instead of per-test teardown**
+  Resources created during test execution are tracked centrally and cleaned up at module teardown.
+  This reduces duplicated teardown logic, improves test readability, and mirrors batch-cleanup strategies used in
+  large test suites and CI environments.
+
+- **Black-box API validation over internal state assertions**
+  Tests validate observable API behavior (responses, status codes, side effects) rather than relying on internal
+  implementation details.
+  This keeps the test suite resilient to backend changes and aligned with consumer-driven testing principles.
+
+- **Normalization layer before validation**
+  API responses are normalized into stable internal representations before validation.
+  This isolates API inconsistencies and prevents fragile tests when optional or unstable fields change.
 
 ## Key Features
 
@@ -39,7 +101,7 @@ It focuses on correctness, resiliency, readability, and realism rather than shor
 
 - Features a **Module-scoped Cleanup Registry** for Pytest.
 - Every resource created during a test suite is tracked and verified as deleted during the final teardown, ensuring no
-data leakage in the test environment.
+  data leakage in the test environment.
 
 ### Environment-Based Configuration
 
@@ -110,77 +172,73 @@ data leakage in the test environment.
 
 ```
 
-## Quick Start
+## Quick Start (uv-friendly)
 
 Follow these steps to get up and running with the MockAPI Users Management Client.
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/StasDee/REST_API.git
-cd REST_API
+git clone https://github.com/StasDee/ResilientAPI.git
+cd ResilientAPI
 ```
 
 ### 2. Install dependencies
 
-It is recommended to use a virtual environment:
-
 ```bash
-python -m venv .venv
-source .venv/bin/activate      # Linux / macOS
-.venv\Scripts\activate         # Windows
+# Install uv if not already installed globally
+python -m pip install --upgrade pip
+pip install uv==0.6.5
 ```
 
-Then install the package in editable mode:
+### 3. Create a uv virtual environment and install the project
 
 ```bash
-pip install -e .
+# Create uv venv and install project in editable mode
+uv -e .venv pip install -e .
+
+# Optional: Upgrade pip inside the venv
+uv -e .venv pip install --upgrade pip
+# Editable install (-e .) ensures any code changes are reflected immediately without reinstalling.
 ```
 
-Requires Python 3.9 or higher.
+### 4. Activate the environment (optional but recommended)
 
-### 3. Configure environment
+```bash
+# Linux/macOS:
+source .venv/bin/activate
 
-Create a `.env` file in the project root with at least the following variable:
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+```
 
-```env
+### 5. Configure environment variables
+
+```bash
 BASE_URL=https://<your_id>.mockapi.io/api/v1/users
 TOKEN=your_token_here
 ```
 
-### 4. Run the main scenario
+### 6. Run the main demonstration
 
 ```bash
 python main.py
 ```
 
-### 5. Execution Modes
-
-#### Option A: Standalone Script
-
-Runs a linear demonstration of the user lifecycle (Create → Fetch → Patch → Delete)
+### 7. Run tests (Pytest recommended)
 
 ```bash
-python main.py
+pytest -v -s
 ```
 
-#### Option B: Pytest Suite (Recommended)
-
-The project includes a full automation suite with custom markers and module-scoped teardown.
-Run all tests from the project root:
-
-```bash
-pytest
-```
-
-Run specific test categories:
+### 8. Run specific test categories:
 
 ```bash
 pytest -m contract   # CRUD lifecycle tests (Parametrized)
 pytest -m scenario   # Complex user-story scenarios
 ```
 
-### 6. Using the API client directly
+### 9. Using the API client directly
 
 ```python
 from mockapi_client.client import UsersApiClient
@@ -192,11 +250,13 @@ with UsersApiClient() as api:
     created = api.create_user(user)
     print(created)
 ```
+
 ---
 
 ## Architecture Overview
 
-This project demonstrates a backend-oriented API test automation architecture, focused on maintainability, scalability, and realistic production patterns.
+This project demonstrates a backend-oriented API test automation architecture, focused on maintainability, scalability,
+and realistic production patterns.
 
 The design intentionally separates responsibilities into clear layers:
 
@@ -213,11 +273,11 @@ Responsible only for HTTP communication and session handling.
 Contains all reusable logic shared across tests:
 
 - **Normalizers**
-  - Convert raw API responses into stable internal representations
-  - Handle missing fields, extra fields, and inconsistent formats
+    - Convert raw API responses into stable internal representations
+    - Handle missing fields, extra fields, and inconsistent formats
 - **Validators**
-  - Centralized business rules and contract validation
-  - Single source of truth for data correctness
+    - Centralized business rules and contract validation
+    - Single source of truth for data correctness
 
 This prevents rule duplication and ensures consistent validation across all test types.
 
@@ -226,11 +286,11 @@ This prevents rule duplication and ensures consistent validation across all test
 Tests orchestrate behavior rather than reimplement rules.
 
 - **Contract tests**
-  - Validate API responses against business rules
-  - Focus on data correctness and schema expectations
+    - Validate API responses against business rules
+    - Focus on data correctness and schema expectations
 - **Scenario tests**
-  - Model real user workflows (create → fetch → validate)
-  - Reuse the same normalization and validation logic
+    - Model real user workflows (create → fetch → validate)
+    - Reuse the same normalization and validation logic
 
 Tests remain thin, readable, and resilient to rule changes.
 
@@ -240,39 +300,43 @@ Tests remain thin, readable, and resilient to rule changes.
 
 - **Separation of concerns** – client, core logic, and tests are clearly separated.
 - **Single source of truth for validation** – all rules live in one place, tests reuse them.
-- **Defensive handling of real-world API inconsistencies** – normalization ensures unstable API responses do not break tests.
-- **Backend-style automation** – no UI, no flakiness, focused on API correctness.
+- **Defensive handling of real-world API inconsistencies** – normalization ensures unstable API responses do not break
+  tests.
+- **Backend-oriented automation** – no UI, no flakiness, focused on API correctness.
 
 This structure mirrors production backend testing patterns rather than tutorial-style test code.
 
 ## Test Organization
 
-The `tests/` folder is structured to clearly separate different types of test cases, following **backend-style automation patterns**. This includes classic CRUD tests, negative/edge-case tests, scenario modeling, and new async & concurrency tests.
+The `tests/` folder is structured to clearly separate different types of test cases, following **backend-oriented
+automation patterns**. This includes classic CRUD tests, negative/edge-case tests, scenario modeling, and new async &
+concurrency tests.
 
 ---
 
 ### 1. Positive CRUD / Contract Tests
 
 - **Files:** `test_user_contract.py`, `test_user_async_contract.py`
-- **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).  
-- **Fixtures used:** 
-  - `api_client` → provides a reusable synchronous API client.
-  - `async_api_client` → provides a reusable async API client.
-  - `user_factory` → generates deterministic, valid user payloads.
-  - `cleanup_registry` → tracks created users to delete them at module teardown.
-- **Markers:** `@pytest.mark.contract`, `@pytest.mark.asyncio` (for async tests).  
+- **Purpose:** Verify the standard Create → Read → Update → Delete workflows (happy-path scenarios).
+- **Fixtures used:**
+    - `api_client` → provides a reusable synchronous API client.
+    - `async_api_client` → provides a reusable async API client.
+    - `user_factory` → generates deterministic, valid user payloads.
+    - `cleanup_registry` → tracks created users to delete them at module teardown.
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.asyncio` (for async tests).
 
 ### 2. Negative / Edge-Case Tests
 
 - **Files:** `test_user_negative.py`, `test_user_async_edge_single.py`, `test_user_async_edge_workflow.py`
-- **Purpose:** Verify that invalid, unexpected, or uncommon user operations are handled correctly by the API client.  
+- **Purpose:** Verify that invalid, unexpected, or uncommon user operations are handled correctly by the API client.
 - **Fixtures used:** `api_client` / `async_api_client`, `user_factory`, `cleanup_registry`.
 - **Markers:** `@pytest.mark.contract`, `@pytest.mark.edge`, `@pytest.mark.asyncio` (for async tests).
 
 ### 3. Scenario / Workflow Tests
 
 - **Files:** `test_scenario.py`, `test_user_scenario.py`, `test_user_async_burst_workflow.py`
-- **Purpose:** Model realistic end-to-end user workflows, combining multiple CRUD operations and multi-step async workflows.
+- **Purpose:** Model realistic end-to-end user workflows, combining multiple CRUD operations and multi-step async
+  workflows.
 - **Markers:** `@pytest.mark.scenario`, `@pytest.mark.asyncio` (for async tests).
 - **Design:** Reuses normalization and validation logic from `core/` to keep tests thin and maintainable.
 
@@ -281,51 +345,57 @@ The `tests/` folder is structured to clearly separate different types of test ca
 These tests were added to simulate **high-load and parallel user operations**.
 
 #### 4.1 Async Burst Tests
-- **Files:**  
-  - `test_user_async_burst_create.py` → Create 20–50 users concurrently (burst load).  
-  - `test_user_async_burst_workflow.py` → Multi-step async burst workflow (create → patch → fetch → delete).  
-- **Purpose:** Simulate traffic spikes and verify backend stability under load.  
-- **Validation:**  
-  - All users created successfully.  
-  - IDs are unique.  
-  - Contract validation passes for all operations.  
-- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency` (burst), `@pytest.mark.edge` (multi-step workflow).  
+
+- **Files:**
+    - `test_user_async_burst_create.py` → Create 20–50 users concurrently (burst load).
+    - `test_user_async_burst_workflow.py` → Multi-step async burst workflow (create → patch → fetch → delete).
+- **Purpose:** Simulate traffic spikes and verify backend stability under load.
+- **Validation:**
+    - All users created successfully.
+    - IDs are unique.
+    - Contract validation passes for all operations.
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency` (burst),
+  `@pytest.mark.edge` (multi-step workflow).
 
 #### 4.2 Async Concurrency / Parallel Tests
-- **Files:**  
-  - `test_user_concurrent_async_creation.py` → Parallel creation of multiple users.  
-  - `test_user_concurrent_async_conflict.py` → Attempt to create multiple users with the **same email simultaneously** (race condition).  
-- **Purpose:** Ensure API handles parallel requests and respects unique constraints.  
-- **Validation:**  
-  - Unique IDs for all users.  
-  - Only one user created for duplicate emails.  
-  - Exceptions handled gracefully.  
-- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency`, `@pytest.mark.edge` (for conflict).  
+
+- **Files:**
+    - `test_user_concurrent_async_creation.py` → Parallel creation of multiple users.
+    - `test_user_concurrent_async_conflict.py` → Attempt to create multiple users with the **same email simultaneously
+      ** (race condition).
+- **Purpose:** Ensure API handles parallel requests and respects unique constraints.
+- **Validation:**
+    - Unique IDs for all users.
+    - Only one user created for duplicate emails.
+    - Exceptions handled gracefully.
+- **Markers:** `@pytest.mark.asyncio`, `@pytest.mark.contract`, `@pytest.mark.concurrency`, `@pytest.mark.edge` (for
+  conflict).
 
 #### 4.3 Thread-Based Concurrency (Optional)
-- **File:** `test_user_concurrency_threads.py`  
-- **Purpose:** Legacy threading-based concurrency test for comparison with async execution.  
-- **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.  
+
+- **File:** `test_user_concurrency_threads.py`
+- **Purpose:** Legacy threading-based concurrency test for comparison with async execution.
+- **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.
 
 ---
 
 ### 5. Fixtures
 
-- **`api_client`**: Reusable synchronous HTTP client.  
-- **`async_api_client`**: Reusable async HTTP client (`httpx.AsyncClient`).  
-- **`user_factory`**: Generates unique user data for each test run.  
-- **`cleanup_registry`**: Ensures all created users are deleted at teardown to prevent data leakage.  
+- **`api_client`**: Reusable synchronous HTTP client.
+- **`async_api_client`**: Reusable async HTTP client (`httpx.AsyncClient`).
+- **`user_factory`**: Generates unique user data for each test run.
+- **`cleanup_registry`**: Ensures all created users are deleted at teardown to prevent data leakage.
 
 ---
 
 ### 6. Markers and Execution Notes
 
-- **Async tests:** `@pytest.mark.asyncio`  
-- **Contract tests:** `@pytest.mark.contract`  
-- **Concurrency tests:** `@pytest.mark.concurrency`  
-- **Edge-case / workflow tests:** `@pytest.mark.edge`  
+- **Async tests:** `@pytest.mark.asyncio`
+- **Contract tests:** `@pytest.mark.contract`
+- **Concurrency tests:** `@pytest.mark.concurrency`
+- **Edge-case / workflow tests:** `@pytest.mark.edge`
 
-Async & Concurrency Excecution:
+Async & Concurrency Execution:
 
 ```bash
 # Run all async and concurrency tests
@@ -340,6 +410,7 @@ pytest -m "edge" -v -s
 # Run only burst creation tests
 pytest -m "concurrency and contract" -v -s
 ```
+
 Best Practices:
 
 Use -v -s for detailed logs.
