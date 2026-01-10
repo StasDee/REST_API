@@ -1,14 +1,15 @@
-# Byte-compiled / cache files
 __pycache__/
 *.py[cod]
+*.pyc
 
-# Virtual environments
 .venv/
 
-# IDE configs
 .idea/
 .vscode/
 
-# Secret environment variables
 .env
 
+*.egg-info/
+
+dist/
+build/
