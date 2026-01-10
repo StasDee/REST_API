@@ -2,10 +2,6 @@ import pytest
 from core.normalizers import normalize_users
 from core.validators import validate_users, ValidationError
 
-import pytest
-from core.normalizers import normalize_users
-from core.validators import validate_users, ValidationError
-
 
 def test_users_contract():
     raw_users = [
