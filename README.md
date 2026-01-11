@@ -130,45 +130,50 @@ This project intentionally makes explicit design choices to mirror real-world ba
 
 ```text
 .
-├── core/                              # Domain logic (backend-style)
-│   ├── __init__.py                     # Package initialization
-│   ├── normalizers.py                  # Normalize unstable API responses
-│   ├── validators.py                   # Business & contract validation logic
-│   └── errors.py                       # Domain-specific validation errors
+├── core/                                         # Domain logic (backend-style)
+│   ├── __init__.py                               # Package initialization
+│   ├── normalizers.py                            # Normalize unstable API responses
+│   ├── validators.py                             # Business & contract validation logic
+│   └── errors.py                                 # Domain-specific validation errors
 │
-├── mockapi_client/                     # Core library package
-│   ├── __init__.py                     # Package initialization
-│   ├── client.py                        # Main API Client logic & Session handling (sync)
-│   ├── async_client.py                  # Async API client using httpx.AsyncClient
-│   ├── config.py                        # Pydantic/Dotenv configuration management
-│   ├── decorators.py                    # Retry and performance decorators (sync)
-│   ├── async_decorators.py              # Async retry and backoff decorators
-│   ├── factory.py                       # Test data and User generation logic
-│   └── logger.py                        # Logging bridge and formatting
+├── mockapi_client/                               # Core library package
+│   ├── __init__.py                               # Package initialization
+│   ├── client.py                                 # Main API Client logic & Session handling (sync)
+│   ├── async_client.py                           # Async API client using httpx.AsyncClient
+│   ├── config.py                                 # Pydantic/Dotenv configuration management
+│   ├── decorators.py                             # Retry and performance decorators (sync)
+│   ├── async_decorators.py                       # Async retry and backoff decorators
+│   ├── factory.py                                # Test data and User generation logic
+│   └── logger.py                                 # Logging bridge and formatting
 │
-├── tests/                               # Automation Suite
-│   ├── __init__.py                      # Package initialization
-│   ├── conftest.py                       # Shared fixtures (Registry, Client, Factory)
-│   ├── test_contract.py                  # Parametrized CRUD/Contract tests (sync)
-│   ├── test_scenario.py                  # End-to-End user story scenarios (sync)
-│   ├── test_user_contract.py             # Parametrized CRUD/Contract tests (sync)
-│   ├── test_user_scenario.py             # End-to-End user story scenarios (sync)
-│   ├── test_user_negative.py             # Negative / invalid input tests
-│   ├── test_user_async_contract.py       # Async CRUD/Contract tests
-│   ├── test_user_async_burst_create.py   # Async burst-load creation test
-│   ├── test_user_async_burst_workflow.py # Async burst multi-step workflow test
-│   ├── test_user_async_edge_single.py    # Async edge-case single-step tests
-│   ├── test_user_async_edge_workflow.py  # Async edge-case workflow tests
-│   ├── test_user_concurrent_async_creation.py  # Async parallel creation tests
-│   ├── test_user_concurrent_async_conflict.py  # Async conflict/race condition tests
-│   └── test_user_concurrency_threads.py        # Legacy threading-based concurrency tests
+├── tests/                                        # Automation Suite
+│   ├── __init__.py                               # Package initialization
+│   ├── conftest.py                               # Shared fixtures (Registry, Client, Factory)
+│   ├── test_contract.py                          # Parametrized CRUD/Contract tests (sync)
+│   ├── test_scenario.py                          # End-to-End user story scenarios (sync)
+│   ├── test_user_contract.py                     # Parametrized CRUD/Contract tests (sync)
+│   ├── test_user_scenario.py                     # End-to-End user story scenarios (sync)
+│   ├── test_user_negative.py                     # Negative / invalid input tests
+│   ├── test_user_async_contract.py               # Async CRUD/Contract tests
+│   ├── test_user_async_burst_create.py           # Async burst-load creation test
+│   ├── test_user_async_burst_workflow.py         # Async burst multi-step workflow test
+│   ├── test_user_async_edge_single.py            # Async edge-case single-step tests
+│   ├── test_user_async_edge_workflow.py          # Async edge-case workflow tests
+│   ├── test_user_concurrent_async_creation.py    # Async parallel creation tests
+│   ├── test_user_concurrent_async_conflict.py    # Async conflict/race condition tests
+│   └── test_user_concurrency_threads.py          # Legacy threading-based concurrency tests
 │
-├── __init__.py                           # Package initialization
-├── .env                                  # Environment variables (Sensitive)
-├── .gitignore                            # Standard Python git exclusions
-├── main.py                               # Entry point / Demonstration script
-├── pyproject.toml                        # Build system and dependencies
-└── README.md                             # Project documentation
+├── ci/                                           # CI/CD, Docker, and Kubernetes test execution setup
+│   ├── Dockerfile                                # Builds a deterministic test image│   │
+│   ├── run_tests.sh                              # Single entrypoint used everywhere
+│   └── ci-test-pod.yaml                          # Kubernetes Pod executing the same entrypoint
+│
+├── __init__.py                                   # Package initialization
+├── .env                                          # Environment variables (Sensitive)
+├── .gitignore                                    # Standard Python git exclusions
+├── main.py                                       # Entry point / Demonstration script
+├── pyproject.toml                                # Build system and dependencies
+└── README.md                                     # Project documentation
 
 ```
 
@@ -238,7 +243,46 @@ pytest -m contract   # CRUD lifecycle tests (Parametrized)
 pytest -m scenario   # Complex user-story scenarios
 ```
 
-### 9. Using the API client directly
+> **Note:** Both Docker and Kubernetes executions use `ci/run_tests.sh` as the single entrypoint
+> inside the container, ensuring consistency across environments.
+
+### 9. Running Tests Using Docker
+The project supports executing the full test suite inside Docker for deterministic and CI-grade execution.
+```bash
+# Build the test image
+docker build -t mockapi-tests -f ci/Dockerfile .
+```
+
+```bash
+# Run all tests in Docker
+docker run --rm \
+  -e BASE_URL=https://<your_id>.mockapi.io/api/v1/users \
+  -e TOKEN=your_token_here \
+  mockapi-tests
+```
+
+```bash
+Run specific pytest markers in Docker
+docker run --rm \
+  -e BASE_URL=https://<your_id>.mockapi.io/api/v1/users \
+  -e TOKEN=your_token_here \
+  mockapi-tests pytest -m contract -v -s
+```
+
+### 10. Running Tests Using Kubernetes
+The repository includes a Kubernetes Pod definition for in-cluster test execution.
+```bash
+# Run test in Kubernetes
+kubectl apply -f ci/ci-test-pod.yaml
+```
+
+```bash
+# Clean up
+kubectl delete pod mockapi-test-pod
+```
+
+
+### 11. Using the API client directly
 
 ```python
 from mockapi_client.client import UsersApiClient
@@ -250,6 +294,20 @@ with UsersApiClient() as api:
     created = api.create_user(user)
     print(created)
 ```
+
+## Execution Matrix (Single Source of Truth)
+
+> **Note:** For Docker, Kubernetes, and CI executions, `ci/run_tests.sh` is the single entrypoint
+> inside the container or Pod. This ensures the exact same test command (`uv -e .venv pytest -v -s`) 
+> is executed consistently across all environments.
+
+| Environment  | Trigger (Who starts execution) | Entrypoint executed inside container | Test command actually run |
+|-------------|--------------------------------|--------------------------------------|---------------------------|
+| Local       | Developer via shell            | N/A                                  | `pytest -v -s`            |
+| Docker      | `docker run <image>`           | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
+| Kubernetes  | Pod startup                    | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
+| CI (GitHub) | CI job runner                  | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
+
 
 ---
 
