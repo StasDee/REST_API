@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mockapi-test-pod
+spec:
+  restartPolicy: Never
+  containers:
+    - name: mockapi-tests
+      image: mockapi-tests:latest
+      env:
+        - name: BASE_URL
+          value: "https://<your_id>.mockapi.io/api/v1/users"
+        - name: TOKEN
+          value: "your_token_here"
+      command: ["bash", "ci/run_tests.sh"]
