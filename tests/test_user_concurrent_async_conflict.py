@@ -19,7 +19,7 @@ pytestmark = [
 async def test_parallel_user_creation_conflict(
         async_api_client,
         user_factory,
-        cleanup_registry,
+        register_async_user,
         concurrent_attempts,
 ):
     """
@@ -56,8 +56,8 @@ async def test_parallel_user_creation_conflict(
             logger.info(f"Expected failure caught: {result}")
         else:
             created_users.append(result)
-            cleanup_registry.append(result["id"])
-            logger.info(f"User created: {result['id']}")
+            await register_async_user(result["id"])
+            logger.info(f"User created: {result}")
 
     # Only one user should be successfully created
     assert len(created_users) == 1, "Multiple users created with duplicate email"

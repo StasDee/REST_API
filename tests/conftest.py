@@ -20,7 +20,7 @@ def api_client():
         yield client
 
 
-@pytest_asyncio.fixture  # (scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def async_api_client():
     async with AsyncUsersApiClient(base_url=BASE_URL, headers={}) as client:
         yield client
@@ -42,7 +42,7 @@ def user_factory():
 # Cleanup Registry (safe for sync + async)
 # =========================================================
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def cleanup_registry():
     """
     Separate registries prevent cross-execution bugs.
