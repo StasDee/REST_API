@@ -48,7 +48,7 @@ class AsyncUsersApiClient:
         resp.raise_for_status()
         return resp.json()
 
-    async def wait_until_deleted(self, user_id: str, retries: int = 10, delay: float = 1.0) -> bool:
+    async def wait_until_deleted(self, user_id: str, retries: int = 5, delay: float = 1.0) -> bool:
         """
         Polls until the user with the given ID is no longer found.
         Returns True if deletion is confirmed (404) or we give up after retries.

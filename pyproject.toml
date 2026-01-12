@@ -46,4 +46,5 @@ markers = [
     "scenario: mark a test as a scenario test",
     "concurrency: marks tests as concurrency tests",
     "asyncio: marks tests as async tests",
+    "edge: mark a test as an edge case test"
 ]

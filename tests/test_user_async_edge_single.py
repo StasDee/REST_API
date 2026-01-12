@@ -15,7 +15,11 @@ pytestmark = [
 @pytest.mark.asyncio
 @pytest.mark.contract
 @pytest.mark.edge
-async def test_patch_before_fetch(async_api_client, user_factory, cleanup_registry):
+async def test_patch_before_fetch(
+        async_api_client,
+        user_factory,
+        register_async_user
+):
     """
     Edge-case workflow test: patch a user immediately after creation
     without fetching it first.
@@ -35,8 +39,8 @@ async def test_patch_before_fetch(async_api_client, user_factory, cleanup_regist
     payload = user_factory.create_user_payload()
     created = await async_api_client.create_user(payload)
     user_id = created["id"]
-    cleanup_registry.append(user_id)
-    logger.info(f"User created: {user_id}")
+    await register_async_user(user_id)
+    logger.info(f"User created: {payload}")
 
     # Patch immediately
     patch_payload = {"name": "EdgeCaseUser"}
@@ -54,7 +58,7 @@ async def test_patch_before_fetch(async_api_client, user_factory, cleanup_regist
 async def test_sequential_user_dependencies(
         async_api_client,
         user_factory,
-        cleanup_registry,
+        register_async_user,
 ):
     """
     Optional workflow test: simulate dependent operations that could trigger edge cases.
@@ -79,17 +83,16 @@ async def test_sequential_user_dependencies(
     # Step 1: Create user
     payload = user_factory.create_user_payload()
     user = await async_api_client.create_user(payload)
-    cleanup_registry.append(user["id"])
-    logger.info(f"Created user {user['id']}")
+    await register_async_user(user["id"])
+    logger.info(f"Created user {user}")
 
     # Step 2: Patch user
     patch_payload = {"name": "edge_case_user"}
     patched = await async_api_client.patch_user(user["id"], patch_payload)
-    logger.info(f"Patched user {patched['id']}")
+    logger.info(f"Patched user {patched}")
 
     # Step 3: Delete user
     await async_api_client.delete_user(user["id"])
-    cleanup_registry.remove(user["id"])
     logger.info(f"Deleted user {user['id']}")
 
     # Step 4: Fetch deleted user (expect error)

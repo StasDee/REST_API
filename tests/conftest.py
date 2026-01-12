@@ -77,7 +77,7 @@ async def register_async_user(cleanup_registry):
 # The One True Janitor™
 # =========================================================
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def final_cleanup(cleanup_registry):
     """
     Runs exactly once.
@@ -100,7 +100,7 @@ def final_cleanup(cleanup_registry):
                     client.delete_user(user_id)
                     logger.debug(f"Successfully deleted user with id: {user_id}")
                 except Exception as e:
-                    logger.error(f"Failed to delete {user_id}: {e}")
+                    logger.warning(f"Failed to delete {user_id}: {e}")
 
     # -------------------
     # Async cleanup
@@ -125,7 +125,7 @@ def final_cleanup(cleanup_registry):
                         else:
                             logger.error(f"User {user_id} still exists after deletion")
                     except Exception as e:
-                        logger.error(f"Failed to delete async user {user_id}: {e}")
+                        logger.warning(f"Failed to delete async user {user_id}: {e}")
 
         try:
             loop = asyncio.get_running_loop()
