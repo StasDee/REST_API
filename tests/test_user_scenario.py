@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 def test_users_end_to_end_scenario(
         api_client,
         user_factory,
-        register_user
+        register_sync_user
 ):
     logger.info("Starting end-to-end scenario test")
     count = 5
@@ -27,7 +27,7 @@ def test_users_end_to_end_scenario(
         logger.info(f"User: {user_id} created: {created}")
 
         # Register user ID in the cleanup registry
-        register_user(user_id)
+        register_sync_user(user_id)
 
         logger.info(f"User: {user_id} registered for later cleanup.")
 
