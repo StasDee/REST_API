@@ -51,7 +51,7 @@ async def test_burst_user_workflow(
         logger.info(f"[Task {idx}] Creating user")
         user = await async_api_client.create_user(payload)
         logger.info(f"[Task {idx}] Created user: {user}")
-        register_async_user(user["id"])
+        await register_async_user(user["id"])
 
         # Patch user
         patch_payload = {"name": f"burst_{idx}"}

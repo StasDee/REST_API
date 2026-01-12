@@ -5,7 +5,7 @@ from mockapi_client.client import UsersApiClient
 from mockapi_client.async_client import AsyncUsersApiClient
 from mockapi_client.factory import UserFactory
 from mockapi_client.logger import get_logger
-from ResilientAPI.mockapi_client.config import BASE_URL
+from mockapi_client.config import BASE_URL
 
 logger = get_logger(__name__)
 
