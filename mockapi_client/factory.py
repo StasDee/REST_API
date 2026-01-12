@@ -18,12 +18,17 @@ class UserFactory:
                 self._used_names.add(name)
                 return name
 
-    def create_user_payload(self) -> dict:
+    def create_user_payload(self, **overrides) -> dict:
+        """
+        Generate a user payload with unique defaults.
+        Fields passed in `overrides` will replace the defaults.
+        """
         username = self._generate_unique_name()
-        return {
+        base_payload = {
             "name": username,
             "email": f"{username}@example.com"
         }
+        return base_payload | overrides
 
     def reset(self):
         """
