@@ -199,7 +199,7 @@ pip install uv==0.6.5
 ### 3. Create a virtual environment in the project root
 
 ```bash
-uv -e .venv
+uv venv .venv
 ```
 
 ### 4. Activate the environment (optional but recommended)
