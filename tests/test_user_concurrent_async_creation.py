@@ -20,7 +20,7 @@ pytestmark = [
 async def test_concurrent_user_creation(
         async_api_client,
         user_factory,
-        cleanup_registry,
+        register_async_user,
         concurrent_users,
 ):
     """
@@ -69,8 +69,8 @@ async def test_concurrent_user_creation(
         assert user is not None
         assert "id" in user
         user_ids.add(user["id"])
-        cleanup_registry.append(user["id"])
-        logger.info(f"User created concurrently: {user['id']}")
+        await register_async_user(user["id"])
+        logger.info(f"User created concurrently: {user}")
 
     # Ensure all IDs are unique
     assert len(user_ids) == concurrent_users, (
