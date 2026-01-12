@@ -5,9 +5,9 @@ import pytest
 logger = get_logger(__name__)
 
 @pytest.mark.contract
-def test_concurrent_user_creation(api_client, user_factory, cleanup_registry):
+def test_concurrent_user_creation(api_client, user_factory, register_sync_user):
     """
-    Creates 10 users in parallel using threads.
+    Creates 10 users in parallel using threads and checks for unique IDs.
     """
     logger.info("-" * 60)
     logger.info("Starting thread-based concurrent user creation test")
@@ -16,7 +16,7 @@ def test_concurrent_user_creation(api_client, user_factory, cleanup_registry):
         payload = user_factory.create_user_payload()
         logger.info(f"[Thread {index}] Payload: {payload}")
         created = api_client.create_user(payload)
-        cleanup_registry.append(created["id"])
+        register_sync_user(created["id"])
         return created
 
     results = []
@@ -28,5 +28,18 @@ def test_concurrent_user_creation(api_client, user_factory, cleanup_registry):
             results.append(user)
 
     logger.info(f"All users created: {results}")
-    assert len(results) == 10
+
+    # Check total count
+    assert len(results) == 10, f"Expected 10 users, got {len(results)}"
+
+    # Check all users have unique IDs
+    ids = [u["id"] for u in results]
+    duplicates = [id for id in ids if ids.count(id) > 1]
+    if duplicates:
+        logger.error(f"Duplicate user IDs detected: {duplicates}")
+        pytest.fail(f"Duplicate user IDs detected: {duplicates}")
+    else:
+        logger.info("✓ All user IDs are unique")
+
+    # Optional: sanity check that all have 'id' key
     assert all("id" in u for u in results)

@@ -55,7 +55,7 @@ This project intentionally makes explicit design choices to mirror real-world ba
   handling rather than strict code generation.
 
 - **Custom retry logic instead of urllib3 retries**
-    Retry behavior is implemented via decorators to:
+  Retry behavior is implemented via decorators to:
 
     - Clearly control what is retried (timeouts, network errors, 5xx)
 
@@ -196,15 +196,10 @@ python -m pip install --upgrade pip
 pip install uv==0.6.5
 ```
 
-### 3. Create a uv virtual environment and install the project
+### 3. Create a virtual environment in the project root
 
 ```bash
-# Create uv venv and install project in editable mode
-uv -e .venv pip install -e .
-
-# Optional: Upgrade pip inside the venv
-uv -e .venv pip install --upgrade pip
-# Editable install (-e .) ensures any code changes are reflected immediately without reinstalling.
+uv -e .venv
 ```
 
 ### 4. Activate the environment (optional but recommended)
@@ -217,26 +212,35 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
-### 5. Configure environment variables
+### 5. Install the project in editable mode
+
+```bash
+# Create uv venv and install project in editable mode
+uv pip install -e .
+```
+
+### 6. Configure environment variables
+
+Create inside the project root .env file with the following content:
 
 ```bash
 BASE_URL=https://<your_id>.mockapi.io/api/v1/users
 TOKEN=your_token_here
 ```
 
-### 6. Run the main demonstration
+### 7. Run the main demonstration
 
 ```bash
 python main.py
 ```
 
-### 7. Run tests (Pytest recommended)
+### 8. Run tests (Pytest recommended)
 
 ```bash
 pytest -v -s
 ```
 
-### 8. Run specific test categories:
+### 9. Run specific test categories:
 
 ```bash
 pytest -m contract   # CRUD lifecycle tests (Parametrized)
@@ -246,8 +250,10 @@ pytest -m scenario   # Complex user-story scenarios
 > **Note:** Both Docker and Kubernetes executions use `ci/run_tests.sh` as the single entrypoint
 > inside the container, ensuring consistency across environments.
 
-### 9. Running Tests Using Docker
+### 10. Running Tests Using Docker
+
 The project supports executing the full test suite inside Docker for deterministic and CI-grade execution.
+
 ```bash
 # Build the test image
 docker build -t mockapi-tests -f ci/Dockerfile .
@@ -269,8 +275,10 @@ docker run --rm \
   mockapi-tests pytest -m contract -v -s
 ```
 
-### 10. Running Tests Using Kubernetes
+### 11. Running Tests Using Kubernetes
+
 The repository includes a Kubernetes Pod definition for in-cluster test execution.
+
 ```bash
 # Run test in Kubernetes
 kubectl apply -f ci/ci-test-pod.yaml
@@ -281,8 +289,7 @@ kubectl apply -f ci/ci-test-pod.yaml
 kubectl delete pod mockapi-test-pod
 ```
 
-
-### 11. Using the API client directly
+### 12. Using the API client directly
 
 ```python
 from mockapi_client.client import UsersApiClient
@@ -298,16 +305,15 @@ with UsersApiClient() as api:
 ## Execution Matrix (Single Source of Truth)
 
 > **Note:** For Docker, Kubernetes, and CI executions, `ci/run_tests.sh` is the single entrypoint
-> inside the container or Pod. This ensures the exact same test command (`uv -e .venv pytest -v -s`) 
+> inside the container or Pod. This ensures the exact same test command (`uv -e .venv pytest -v -s`)
 > is executed consistently across all environments.
 
-| Environment  | Trigger (Who starts execution) | Entrypoint executed inside container | Test command actually run |
-|-------------|--------------------------------|--------------------------------------|---------------------------|
-| Local       | Developer via shell            | N/A                                  | `pytest -v -s`            |
-| Docker      | `docker run <image>`           | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
-| Kubernetes  | Pod startup                    | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
-| CI (GitHub) | CI job runner                  | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`|
-
+| Environment | Trigger (Who starts execution) | Entrypoint executed inside container | Test command actually run  |
+|-------------|--------------------------------|--------------------------------------|----------------------------|
+| Local       | Developer via shell            | N/A                                  | `pytest -v -s`             |
+| Docker      | `docker run <image>`           | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
+| Kubernetes  | Pod startup                    | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
+| CI (GitHub) | CI job runner                  | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
 
 ---
 

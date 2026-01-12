@@ -10,9 +10,9 @@ logger = get_logger(__name__)
 
 @pytest.mark.contract
 @pytest.mark.parametrize("index", range(5))
-def test_user_crud_lifecycle(api_client, user_factory, cleanup_registry, index):
+def test_user_crud_lifecycle(api_client, user_factory, register_sync_user, index):
     """
-    Verifies full CRUD lifecycle. Users are registered in cleanup_registry
+    Verifies full CRUD lifecycle. Users are registered in register_sync_user
     and will be deleted at the end of the module.
     """
     logger.info("-" * 60)
@@ -28,7 +28,7 @@ def test_user_crud_lifecycle(api_client, user_factory, cleanup_registry, index):
     logger.info(f"User {user_id} created: {created}")
 
     # Register for cleanup
-    cleanup_registry.append(user_id)
+    register_sync_user(user_id)
     logger.info(f"User {user_id} registered for later cleanup.")
 
     # Fetch user

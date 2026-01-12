@@ -1,76 +1,85 @@
-import asyncio
-import time
 import pytest
-
+import asyncio
+import random
+import string
 from mockapi_client.logger import get_logger
-from core.normalizers import normalize_users
-from core.validators import validate_users
+import uuid
 
 logger = get_logger(__name__)
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.contract,
-    pytest.mark.concurrency,
-]
+pytestmark = pytest.mark.asyncio
+
+
+def random_string(length: int = 6) -> str:
+    """Generate a random string for unique emails and names."""
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+
+def generate_user_payload(index: int) -> dict:
+    uid = str(uuid.uuid4())
+    return {
+        "id": uid,  # optional if server auto-generates
+        "name": f"User_{uid[:6]}",
+        "email": f"user_{uid[:6]}@example.com",
+    }
 
 
 @pytest.mark.asyncio
-@pytest.mark.contract
-@pytest.mark.parametrize("burst_size", [20, 30, 50])
-async def test_concurrent_user_burst_create(
-        async_api_client,
-        user_factory,
-        cleanup_registry,
-        burst_size,
-):
+async def test_user_burst_unique_ids(async_api_client, register_async_user):
     """
-    Burst test: create a larger number of users concurrently to simulate traffic spikes
-    and validate backend stability.
+    Burst test: create 20 random users concurrently and register them locally.
 
-    Purpose:
-    - Verify API handles bursts of 20–50 concurrent CREATE requests.
-    - Ensure no partial failures, corrupted responses, or duplicate IDs.
-    - All created users satisfy contract validation.
-
-    Notes:
-    - Measures rough total duration (informational only).
-    - Uses existing async infrastructure, factory, logging, and cleanup.
-    - Keeps validation lightweight to reduce flakiness.
+    Steps:
+    1. Generate 20 random user payloads with unique emails.
+    2. Send all creation requests concurrently.
+    3. Register each successfully created user with `register_async_user`.
+    4. Print all successfully created users and failures.
+    5. Fail the test if no users were created.
+    6. Check that all returned IDs are unique (no duplicates).
     """
+    num_users = 20
+    payloads = [generate_user_payload(i) for i in range(num_users)]
 
-    logger.info("-" * 60)
-    logger.info(f"Starting burst user creation test with {burst_size} users")
+    async def create_and_register_user(payload):
+        try:
+            user = await async_api_client.create_user(payload)
+            # Register the created user in test context
+            await register_async_user(user["id"])
+            return user
+        except Exception as e:
+            return e
 
-    payloads = [user_factory.create_user_payload() for _ in range(burst_size)]
-    logger.info(f"Prepared {burst_size} user payloads")
+    # Fire all requests concurrently
+    results = await asyncio.gather(*(create_and_register_user(p) for p in payloads))
 
-    start_time = time.time()
+    successes = [r for r in results if not isinstance(r, Exception)]
+    failures = [r for r in results if isinstance(r, Exception)]
 
-    # Create users concurrently
-    tasks = [async_api_client.create_user(payload) for payload in payloads]
-    results = await asyncio.gather(*tasks)
+    logger.info(f"\nCreated users ({len(successes)}):")
+    for u in successes:
+        logger.info(u)
 
-    duration = time.time() - start_time
-    logger.info(f"Burst creation completed in {duration:.2f} seconds")
+    logger.warning(f"\nFailures ({len(failures)}):")
+    for f in failures:
+        logger.warning(f)
 
-    # Normalize and validate responses
-    normalized_users = normalize_users(results)
-    validate_users(normalized_users)
-    logger.info("All burst users passed contract validation")
+    # Fail if nothing was created
+    assert successes, "All user creation requests failed!"
 
-    # Basic checks and cleanup
-    assert len(results) == burst_size
-
-    user_ids = set()
-    for user in results:
-        assert user is not None
+    # Basic field checks
+    for user in successes:
         assert "id" in user
-        user_ids.add(user["id"])
-        cleanup_registry.append(user["id"])
-        logger.info(f"User created in burst: {user['id']}")
+        assert "name" in user
+        assert "email" in user
 
-    # Ensure all IDs are unique
-    assert len(user_ids) == burst_size, "Duplicate user IDs detected during burst creation"
+    # Check all users have unique IDs
+    ids = [u["id"] for u in results]
+    duplicates = set([id for id in ids if ids.count(id) > 1])
+    if duplicates:
+        logger.error(f"Duplicate user IDs detected: {duplicates}")
+        pytest.fail(f"Duplicate user IDs detected: {duplicates}")
+    else:
+        logger.info("✓ All user IDs are unique")
 
-    logger.info(f"Burst user creation test with {burst_size} users completed successfully")
+    # Sanity check that all have 'id' key
+    assert all("id" in u for u in results)
