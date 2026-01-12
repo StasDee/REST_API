@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 
 import httpx
 from .async_decorators import async_retry
@@ -38,6 +39,12 @@ class AsyncUsersApiClient:
     @async_retry()
     async def get_user(self, user_id: str) -> dict:
         resp = await self._client.get(f"{self.base_url}/{user_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    @async_retry()
+    async def patch_user(self, user_id: str, partial_data: Dict) -> Dict:
+        resp = await self._client.patch(f"{self.base_url}/{user_id}", json=partial_data)
         resp.raise_for_status()
         return resp.json()
 

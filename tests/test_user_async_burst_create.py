@@ -15,7 +15,7 @@ def random_string(length: int = 6) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
-def generate_user_payload(index: int) -> dict:
+def generate_user_payload() -> dict:
     uid = str(uuid.uuid4())
     return {
         "id": uid,  # optional if server auto-generates
@@ -24,6 +24,7 @@ def generate_user_payload(index: int) -> dict:
     }
 
 
+@pytest.mark.contract
 @pytest.mark.asyncio
 async def test_user_burst_unique_ids(async_api_client, register_async_user):
     """
@@ -38,7 +39,7 @@ async def test_user_burst_unique_ids(async_api_client, register_async_user):
     6. Check that all returned IDs are unique (no duplicates).
     """
     num_users = 20
-    payloads = [generate_user_payload(i) for i in range(num_users)]
+    payloads = [generate_user_payload() for _ in range(num_users)]
 
     async def create_and_register_user(payload):
         try:

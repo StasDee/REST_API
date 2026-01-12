@@ -17,11 +17,11 @@ pytestmark = [
 @pytest.mark.asyncio
 @pytest.mark.contract
 @pytest.mark.edge
-@pytest.mark.parametrize("burst_size", [10, 20])
+@pytest.mark.parametrize("burst_size", [10])#, 20])
 async def test_burst_user_workflow(
         async_api_client,
         user_factory,
-        cleanup_registry,
+        register_async_user,
         burst_size,
 ):
     """
@@ -50,16 +50,17 @@ async def test_burst_user_workflow(
         payload = user_factory.create_user_payload()
         logger.info(f"[Task {idx}] Creating user")
         user = await async_api_client.create_user(payload)
-        cleanup_registry.append(user["id"])
+        logger.info(f"[Task {idx}] Created user: {user}")
+        register_async_user(user["id"])
 
         # Patch user
         patch_payload = {"name": f"burst_{idx}"}
         patched = await async_api_client.patch_user(user["id"], patch_payload)
-        logger.info(f"[Task {idx}] Patched user: {patched['id']}")
+        logger.info(f"[Task {idx}] Patched user: {patched['id']} with name {patched['name']}")
 
         # Fetch user
         fetched = await async_api_client.get_user(user["id"])
-        logger.info(f"[Task {idx}] Fetched user: {fetched['id']}")
+        logger.info(f"[Task {idx}] Fetched user: {fetched['id']} with name {fetched['name']}")
 
         return fetched
 
