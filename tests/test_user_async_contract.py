@@ -10,7 +10,11 @@ logger = get_logger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.contract
-async def test_async_user_create_and_validate(async_api_client, user_factory):
+async def test_async_user_create_and_validate(
+        async_api_client,
+        user_factory,
+        register_async_user
+):
     """
     Async contract test:
     1. Create user asynchronously
@@ -24,7 +28,7 @@ async def test_async_user_create_and_validate(async_api_client, user_factory):
     )
 
     created_user = await async_api_client.create_user(payload)
-
+    await register_async_user(created_user["id"])
     assert created_user is not None
     assert "id" in created_user
 
