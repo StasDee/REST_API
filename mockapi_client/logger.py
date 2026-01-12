@@ -13,7 +13,14 @@ def get_logger(name: str = __name__, level: int = None) -> logging.Logger:
         logger.setLevel(logging.DEBUG)
 
     # Add this block to strictly silence noise
-    for noisy_logger in ["urllib3", "requests", "charset_normalizer"]:
+    for noisy_logger in [
+        "urllib3",
+        "requests",
+        "charset_normalizer",
+        "httpx",
+        "httpcore",
+        "asyncio",
+    ]:
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
         logging.getLogger(noisy_logger).propagate = False
 

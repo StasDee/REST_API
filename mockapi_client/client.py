@@ -10,14 +10,25 @@ logger = get_logger(__name__)
 
 
 class UsersApiClient:
+    """
+       Users API client.
+
+       Design contract:
+       - 2xx  -> returns parsed JSON (or None if empty)
+       - 404  -> returns None
+       - 4xx  -> raises HTTPError
+       - 5xx  -> raises HTTPError (retryable)
+    """
+
     def __init__(
             self,
             base_url: str = BASE_URL,
-            timeout: int = DEFAULT_TIMEOUT
+            timeout: int = DEFAULT_TIMEOUT,
+            session: Optional[requests.Session] = None,
     ):
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
-        self.session = requests.Session()
+        self.session = session or requests.Session()
         self.session.headers.update(
             {
                 "Authorization": f"Bearer {TOKEN}",
@@ -25,25 +36,61 @@ class UsersApiClient:
             }
         )
 
+    # -------------------------------------------------
+    # Context manager support
+    # -------------------------------------------------
+
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.session.close()
 
-    def _request(self, method: str, endpoint: str = "", **kwargs) -> Optional[Any]:
-        url = f"{self.base_url}/{endpoint}".rstrip('/')
-        resp = self.session.request(method, url, timeout=self.timeout, **kwargs)
+    # -------------------------------------------------
+    # Core request handler
+    # -------------------------------------------------
 
-        # Handle specific MockAPI 500 behaviors
-        if resp.status_code >= 500:
-            raise HTTPError(f"Server Error: {resp.status_code}", response=resp)
+    def _request(
+            self,
+            method: str,
+            endpoint: str = "",
+            **kwargs
+    ) -> Optional[Any]:
+        url = f"{self.base_url}/{endpoint}".rstrip("/")
+        response = self.session.request(method, url, timeout=self.timeout, **kwargs)
 
-        if resp.status_code == 404:
+        # # Handle specific MockAPI 500 behaviors
+        # if response.status_code >= 500:
+        #     raise HTTPError(f"Server Error: {response.status_code}", response=resp)
+
+        # Explicit 404 contract
+        if response.status_code == 404:
             return None
 
-        resp.raise_for_status()
-        return resp.json() if resp.content else None
+        # Raise for any other error (4xx / 5xx)
+        try:
+            response.raise_for_status()
+        except HTTPError as exc:
+            logger.error(
+                "HTTP error",
+                extra={
+                    "method": method,
+                    "url": url,
+                    "status": response.status_code,
+                    "body": response.text,
+                },
+            )
+            raise exc
+
+        # Successful response
+        if not response.content:
+            return None
+
+        return response.json()
+
+    # -------------------------------------------------
+    # API methods
+    # -------------------------------------------------
 
     @retry_on_failure()
     def create_user(self, user_data: Dict) -> Dict:
@@ -66,20 +113,29 @@ class UsersApiClient:
     def list_users(self) -> List[Dict]:
         return self._request("GET") or []
 
+    # -------------------------------------------------
+    # Utility helpers (non-contractual)
+    # -------------------------------------------------
+
     def get_user_status(self, user_id):
         url = f"{self.base_url}/{user_id}"
-        resp = self.session.get(url)
-        return resp.status_code
+        response = self.session.get(url, timeout=self.timeout)
+        return response.status_code
 
-    def wait_until_deleted(self, user_id, retries=5, delay=1):
+    def wait_until_deleted(self, user_id: str, retries: int = 5, delay: int = 1) -> bool:
         """
-        Polls the API until the user is no longer found.
-        Returns True if deleted, False otherwise.
+        Polls until the user is no longer found.
+        Returns True if deletion is confirmed.
         """
-        for i in range(retries):
-            # Reuse your existing status check method
-            if self.get_user_status(user_id) in [404, 500]:
+        for attempt in range(1, retries + 1):
+            status = self.get_user_status(user_id)
+            if status == 404:
                 return True
-            logger.debug(f"Waiting for deletion verification for {user_id}... attempt {i + 1}")
+
+            logger.debug(
+                f"Waiting for deletion of user {user_id} "
+                f"(attempt {attempt}/{retries})"
+            )
             sleep(delay)
+
         return False
