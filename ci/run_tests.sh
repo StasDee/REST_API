@@ -37,15 +37,10 @@ if [[ "$OS_TYPE" == "Linux" || "$OS_TYPE" == "Darwin" ]]; then
     fi
 elif [[ "$OS_TYPE" == "Windows_NT" ]]; then
     if $IS_POWERSHELL; then
-        # PowerShell fallback
-        if command -v pwsh >/dev/null 2>&1; then
-            PS_CMD="pwsh"
-        else
-            PS_CMD="powershell.exe"
-        fi
-
+        # PowerShell
+        PS_CMD=$(command -v pwsh || echo powershell.exe)
         echo "Detected PowerShell. Running pytest inside $PS_CMD..."
-        "$PS_CMD" -NoProfile -Command "& {Set-ExecutionPolicy Bypass -Scope Process; . '$VENV_DIR/Scripts/Activate.ps1'; pytest -v -s $*}"
+        "$PS_CMD" -NoProfile -Command "& {Set-ExecutionPolicy Bypass -Scope Process; . '$VENV_DIR/Scripts/Activate.ps1'; python -m pytest -v -s $*}"
         exit 0
     else
         # Git Bash / MSYS / Cygwin
@@ -65,3 +60,5 @@ fi
 # Run pytest (for bash/Linux)
 # -----------------------
 pytest -v -s "$@"
+
+echo "✅ Tests finished successfully"

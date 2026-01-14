@@ -164,9 +164,10 @@ This project intentionally makes explicit design choices to mirror real-world ba
 │   └── test_user_concurrency_threads.py          # Legacy threading-based concurrency tests
 │
 ├── ci/                                           # CI/CD, Docker, and Kubernetes test execution setup
-│   ├── Dockerfile                                # Builds a deterministic test image│   │
+│   ├── Dockerfile                                # Builds a deterministic test image│
+    │── run_docker_tests.sh                       # Script to build and run tests in Docker from shell
 │   ├── run_tests.sh                              # Single entrypoint used everywhere
-│   └── ci-test-pod.yaml                          # Kubernetes Pod executing the same entrypoint
+│   └── mockapi_test_pod.yaml                          # Kubernetes Pod executing the same entrypoint
 │
 ├── __init__.py                                   # Package initialization
 ├── .env                                          # Environment variables (Sensitive)
@@ -250,45 +251,6 @@ pytest -m scenario   # Complex user-story scenarios
 > **Note:** Both Docker and Kubernetes executions use `ci/run_tests.sh` as the single entrypoint
 > inside the container, ensuring consistency across environments.
 
-### 10. Running Tests Using Docker
-
-The project supports executing the full test suite inside Docker for deterministic and CI-grade execution.
-
-```bash
-# Build the test image
-docker build -t mockapi-tests -f ci/Dockerfile .
-```
-
-```bash
-# Run all tests in Docker
-docker run --rm \
-  -e BASE_URL=https://<your_id>.mockapi.io/api/v1/users \
-  -e TOKEN=your_token_here \
-  mockapi-tests
-```
-
-```bash
-Run specific pytest markers in Docker
-docker run --rm \
-  -e BASE_URL=https://<your_id>.mockapi.io/api/v1/users \
-  -e TOKEN=your_token_here \
-  mockapi-tests pytest -m contract -v -s
-```
-
-### 11. Running Tests Using Kubernetes
-
-The repository includes a Kubernetes Pod definition for in-cluster test execution.
-
-```bash
-# Run test in Kubernetes
-kubectl apply -f ci/ci-test-pod.yaml
-```
-
-```bash
-# Clean up
-kubectl delete pod mockapi-test-pod
-```
-
 ### 12. Using the API client directly
 
 ```python
@@ -301,6 +263,115 @@ with UsersApiClient() as api:
     created = api.create_user(user)
     print(created)
 ```
+---
+
+## Running Tests in Docker and Kubernetes (local CI simulation)
+
+This project demonstrates running API test automation inside a local
+Kubernetes cluster using kind.
+
+### Prerequisites
+- Docker Desktop
+- WSL2
+- kind
+- kubectl
+
+This project can run tests either directly in Docker or in a local Kubernetes cluster using kind.
+
+---
+
+### **Option 1: Run Tests in Docker**
+
+1. Make sure your `.env` file exists with:
+
+```text
+BASE_URL=https://<your_id>.mockapi.io/api/v1/users
+API_TOKEN=your_token_here
+```
+
+2. Build the Docker image:
+```bash
+docker build -t mockapi-tests -f ci/Dockerfile .
+```
+
+3. Run the tests inside the Docker container:
+
+```bash
+docker run --rm -e BASE_URL="$env:BASE_URL" -e TOKEN="$env:API_TOKEN" mockapi-tests
+```
+Or use the helper script:
+
+```bash
+./ci/run_docker_tests.sh
+.\ci\run_docker_tests.sh
+bash .\ci\run_docker_tests.sh
+wsl bash ./ci/run_docker_tests.sh
+# depending on your environment
+```
+
+### **Option 2: Run Tests in Kubernetes (kind)**
+
+1. Install kind if already not installed:
+
+```bash
+winget install kind
+# To check installation, run:
+kind --version
+# Verify kubectl installation:
+kubectl version --client
+ ```
+
+2. Create a local Kubernetes cluster:
+
+```bash
+kind create cluster --name mockapi-test-cluster
+kubectl cluster-info --context kind-mockapi-test-cluster
+kubectl get nodes
+```
+
+3. Load the Docker image into the kind cluster:
+
+```bash
+kind load docker-image mockapi-tests:latest --name mockapi-test-cluster
+```
+
+4. Create a ConfigMap from your .env file:
+
+```bash
+kubectl create configmap mockapi-env --from-env-file=.env
+kubectl get configmap mockapi-env -o yaml
+```
+
+5. Run the pod and check logs:
+
+```bash
+kubectl apply -f ci/mockapi_test_pod.yaml
+kubectl logs -f mockapi-test-pod
+```
+
+6. Clean up:
+
+```bash
+kubectl delete pod mockapi-test-pod
+kind delete cluster --name mockapi-test-cluster
+```
+
+7. To verify fail reason:
+
+```bash
+kubectl describe pod mockapi-test-pod
+```
+
+Or use the helper script:
+
+```bash
+# Linux / macOS / WSL / Git Bash
+./ci/run_k8s_tests.sh
+
+# Windows PowerShell
+wsl bash ci/run_k8s_tests.sh
+```
+---
 
 ## Execution Matrix (Single Source of Truth)
 
