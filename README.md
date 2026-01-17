@@ -39,6 +39,9 @@ This repository is intended for:
 
 ## Trade-offs & Design Decisions
 
+<details>
+<summary>click to expand</summary>
+
 This project intentionally makes explicit design choices to mirror real-world backend and API automation constraints.
 
 - **requests + httpx instead of a single HTTP library**
@@ -79,6 +82,10 @@ This project intentionally makes explicit design choices to mirror real-world ba
 - **Normalization layer before validation**
   API responses are normalized into stable internal representations before validation.
   This isolates API inconsistencies and prevents fragile tests when optional or unstable fields change.
+
+</details>
+
+---
 
 ## Key Features
 
@@ -128,6 +135,9 @@ This project intentionally makes explicit design choices to mirror real-world ba
 
 ## Project Structure
 
+<details>
+<summary>click to expand</summary>
+
 ```text
 .
 ├── core/                                         # Domain logic (backend-style)
@@ -164,10 +174,10 @@ This project intentionally makes explicit design choices to mirror real-world ba
 │   └── test_user_concurrency_threads.py          # Legacy threading-based concurrency tests
 │
 ├── ci/                                           # CI/CD, Docker, and Kubernetes test execution setup
-│   ├── Dockerfile                                # Builds a deterministic test image│
-    │── run_docker_tests.sh                       # Script to build and run tests in Docker from shell
+│   ├── Dockerfile                                # Builds a deterministic test image
+│   │── run_docker_tests.sh                       # Legacy CI helper (not for local use)
 │   ├── run_tests.sh                              # Single entrypoint used everywhere
-│   └── mockapi_test_job.yaml                          # Kubernetes Pod executing the same entrypoint
+│   └── mockapi_test_job.yaml                     # Kubernetes Pod executing the same entrypoint
 │
 ├── __init__.py                                   # Package initialization
 ├── .env                                          # Environment variables (Sensitive)
@@ -177,6 +187,10 @@ This project intentionally makes explicit design choices to mirror real-world ba
 └── README.md                                     # Project documentation
 
 ```
+
+</details>
+
+---
 
 ## Quick Start (uv-friendly)
 
@@ -220,38 +234,33 @@ source .venv/bin/activate
 uv pip install -e .
 ```
 
-### 6. Configure environment variables
+### 6. Local Execution (Developer Workflow)
 
-Create inside the project root .env file with the following content:
+```text
+Local execution is supported for development, debugging, and exploration.
 
-```bash
-BASE_URL=https://<your_id>.mockapi.io/api/v1/users
-TOKEN=your_token_here
+Developers may:
+- Run `python main.py` to explore the client behavior
+- Run `pytest -v -s` to execute the test suite locally
+
+Local runs assume the presence of valid environment variables and may rely on a local `.env` file.
+
+CI execution (Docker and Kubernetes) remains the authoritative and reproducible execution environment.
 ```
 
-### 7. Run the main demonstration
+### Run the main demonstration
 
 ```bash
 python main.py
 ```
 
-### 8. Run tests (Pytest recommended)
+### Run tests (Pytest recommended)
 
 ```bash
 pytest -v -s
 ```
 
-### 9. Run specific test categories:
-
-```bash
-pytest -m contract   # CRUD lifecycle tests (Parametrized)
-pytest -m scenario   # Complex user-story scenarios
-```
-
-> **Note:** Both Docker and Kubernetes executions use `ci/run_tests.sh` as the single entrypoint
-> inside the container, ensuring consistency across environments.
-
-### 12. Using the API client directly
+### 7. Using the API client directly
 
 ```python
 from mockapi_client.client import UsersApiClient
@@ -265,117 +274,14 @@ with UsersApiClient() as api:
 ```
 ---
 
-## Running Tests in Docker and Kubernetes (local CI simulation)
-
-This project demonstrates running API test automation inside a local
-Kubernetes cluster using kind.
-
-### Prerequisites
-- Docker Desktop
-- WSL2
-- kind
-- kubectl
-
-This project can run tests either directly in Docker or in a local Kubernetes cluster using kind.
-
----
-
-### **Option 1: Run Tests in Docker**
-
-1. Make sure your `.env` file exists with:
-
-```text
-BASE_URL=https://<your_id>.mockapi.io/api/v1/users
-API_TOKEN=your_token_here
-```
-
-2. Build the Docker image:
-```bash
-docker build -t mockapi-tests -f ci/Dockerfile .
-```
-
-3. Run the tests inside the Docker container:
-
-```bash
-docker run --rm -e BASE_URL="$env:BASE_URL" -e TOKEN="$env:API_TOKEN" mockapi-tests
-```
-Or use the helper script:
-
-```bash
-./ci/run_docker_tests.sh
-.\ci\run_docker_tests.sh
-bash .\ci\run_docker_tests.sh
-wsl bash ./ci/run_docker_tests.sh
-# depending on your environment
-```
-
-### **Option 2: Run Tests in Kubernetes (kind)**
-
-1. Install kind if already not installed:
-
-```bash
-winget install kind
-# To check installation, run:
-kind --version
-# Verify kubectl installation:
-kubectl version --client
- ```
-
-2. Create a local Kubernetes cluster:
-
-```bash
-kind create cluster --name mockapi-test-cluster
-kubectl cluster-info --context kind-mockapi-test-cluster
-kubectl get nodes
-```
-
-3. Load the Docker image into the kind cluster:
-
-```bash
-kind load docker-image mockapi-tests:latest --name mockapi-test-cluster
-```
-
-4. Create a ConfigMap from your .env file:
-
-```bash
-kubectl create configmap mockapi-env --from-env-file=.env
-kubectl get configmap mockapi-env -o yaml
-```
-
-5. Run the pod and check logs:
-
-```bash
-kubectl apply -f ci/mockapi_test_job.yaml
-kubectl logs -f mockapi-test-job
-```
-
-6. Clean up:
-
-```bash
-kubectl delete pod mockapi-test-job
-kind delete cluster --name mockapi-test-cluster
-```
-
-7. To verify fail reason:
-
-```bash
-kubectl describe pod mockapi-test-job
-```
-
-Or use the helper script:
-
-```bash
-# Linux / macOS / WSL / Git Bash
-./ci/run_k8s_tests.sh
-
-# Windows PowerShell
-wsl bash ci/run_k8s_tests.sh
-```
----
-
 ## Running CI Tests in GitHub Actions
 
-This project has two types of CI workflows: **Docker tests** (automatic) and **Kubernetes tests** (manual).  
+<details>
+<summary>click to expand</summary>
+
+This project executes all containerized (Docker and Kubernetes) test runs exclusively in CI.
+Local test execution via pytest or main.py is supported for development and debugging.
+Docker and Kubernetes are treated as controlled CI execution environments rather than primary local developer tools.
 
 ---
 
@@ -384,21 +290,14 @@ This project has two types of CI workflows: **Docker tests** (automatic) and **K
 - **File:** `ci-tests.yml`
 - **Trigger:** On push to `main` branch or on pull requests
 - **Environment:** Runs inside a Docker container
-- **Automatic:** Runs automatically on push/PR
+- **Automatic:** Runs automatically on push/pull
 - **Steps:**
   1. Checkout the repository
   2. Set up Docker Buildx
   3. Build the test Docker image
-  4. Run tests inside the Docker container using secrets (`BASE_URL` and `API_TOKEN`)
-  
-Example of environment variables injected from GitHub Secrets:
+  4. Run tests inside the Docker container using secrets (`BASE_URL` and `API_TOKEN`)  
 
-```bash
-docker run --rm \
-  -e BASE_URL="$BASE_URL" \
-  -e TOKEN="$API_TOKEN" \
-  mockapi-tests
-```
+Note: Docker image build and execution are fully handled in CI. Local Docker runs are not supported.
 
 ### **2. Kubernetes CI Workflow**
 
@@ -414,80 +313,17 @@ docker run --rm \
   5. Run the Kubernetes Job (mockapi-test-job)
   6. Stream logs and verify completion
 
-  #### **Manual trigger in GitHub:**
-  1. Go to Actions → CI Tests (Kubernetes)
-  2. Click Run workflow
-  3. Select branch (main) and click Run workflow
-
-  #### **3. Notes**
-  - **Docker CI**:
-    - Fast, automatic, runs on every push or PR.
-    - Environment variables are injected from GitHub Secrets.
-  
-  - **Kubernetes CI**:
-    - Simulates a production-like environment.
-    - Runs manually via GitHub Actions **workflow_dispatch**.
-    - Uses `kind` to spin up a local cluster and runs tests in a Job.
-  
-  - **Shared aspects**:
-    - Both workflows use the same `mockapi-tests` Docker image.
-    - Test scripts are identical (`ci/run_tests.sh`).
-
-  - **Secrets**:
-    - `BASE_URL` and `API_TOKEN` stored in GitHub Secrets.
-    - Avoids hardcoding credentials.
-
-
- #### **4 Workflow Diagram**
-```text
-Push / Pull Request
-        │
-        ▼
-  +------------------+
-  |  Docker Workflow |
-  |  (ci-tests.yml)  |
-  +------------------+
-        │
-        │ Runs automatically
-        ▼
-  Docker container executes tests
-        │
-        ▼
-    Results / Logs
-─────────────────────────────
-Manual Kubernetes Workflow
-        │
-        ▼
-  +----------------------+
-  | Kubernetes Workflow  |
-  |  (k8s-tests.yml)     |
-  +----------------------+
-        │
-        │ Run manually via Actions
-        ▼
- Local kind cluster spins up
-        │
-        ▼
- Docker image loaded → Job runs tests
-        │
-        ▼
-    Results / Logs
-```
+</details>
 
 --- 
 
+
 ## Execution Matrix (Single Source of Truth)
 
-> **Note:** For Docker, Kubernetes, and CI executions, `ci/run_tests.sh` is the single entrypoint
-> inside the container or Pod. This ensures the exact same test command (`uv -e .venv pytest -v -s`)
-> is executed consistently across all environments.
-
-| Environment | Trigger (Who starts execution) | Entrypoint executed inside container | Test command actually run  |
-|-------------|--------------------------------|--------------------------------------|----------------------------|
-| Local       | Developer via shell            | N/A                                  | `pytest -v -s`             |
-| Docker      | `docker run <image>`           | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
-| Kubernetes  | Pod startup                    | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
-| CI (GitHub) | CI job runner                  | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s` |
+| Environment   | Trigger (Who starts execution) | Entrypoint executed inside container | Test command actually run   |
+|---------------|--------------------------------|--------------------------------------|-----------------------------|
+| CI Docker     | GitHub Actions runner          | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`  |
+| CI Kubernetes | Pod startup                    | `ci/run_tests.sh`                    | `uv -e .venv pytest -v -s`  |
 
 ---
 
@@ -580,6 +416,9 @@ concurrency tests.
 
 ### 4. Async Burst & Concurrency Tests
 
+<details>
+<summary>click to expand</summary>
+
 These tests were added to simulate **high-load and parallel user operations**.
 
 #### 4.1 Async Burst Tests
@@ -614,6 +453,8 @@ These tests were added to simulate **high-load and parallel user operations**.
 - **File:** `test_user_concurrency_threads.py`
 - **Purpose:** Legacy threading-based concurrency test for comparison with async execution.
 - **Markers:** `@pytest.mark.contract`, `@pytest.mark.concurrency`.
+
+</details>
 
 ---
 
