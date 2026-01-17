@@ -20,6 +20,11 @@ jobs:
         run: |
           docker build -t mockapi-tests -f ci/Dockerfile .
 
+      - name: Create .env file from secrets
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
+          echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env    
+
       - name: Run tests in Docker
         env:
           BASE_URL: ${{ secrets.BASE_URL }}

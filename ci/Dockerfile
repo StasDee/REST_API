@@ -41,7 +41,7 @@ COPY . /app
 # -----------------------------
 # If you have a .env in your project, it will be available inside Docker
 # So run_tests.sh and mockapi_client.config.py can pick it up automatically
-COPY .env /app/.env
+# COPY .env /app/.env
 
 # -----------------------------
 # Create uv-managed virtual environment
