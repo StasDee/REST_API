@@ -29,8 +29,11 @@ jobs:
           kubectl version --client
           kind --version
 
+      - name: Create .env file from secrets
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
+          echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env
+
       - name: Run Kubernetes tests
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          API_TOKEN: ${{ secrets.API_TOKEN }}
         run: bash ci/run_k8s_tests.sh
+
