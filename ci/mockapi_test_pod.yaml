@@ -1,31 +1,25 @@
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: mockapi-test-pod
+  name: mockapi-test-job
 spec:
-  restartPolicy: Never
-  containers:
-    - name: mockapi-tests
-      image: mockapi-tests:latest
-      imagePullPolicy: Never  # use local image
-      command: ["bash", "ci/run_tests.sh"]
-      env:
-        - name: BASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: mockapi-env
-              key: BASE_URL
-        - name: TOKEN
-          valueFrom:
-            configMapKeyRef:
-              name: mockapi-env
-              key: API_TOKEN
-
-
-
-# kubectl get configmap mockapi-env -o yaml
-
-#kubectl delete pod mockapi-test-pod
-#kubectl apply -f ci/mockapi_test_pod.yaml
-#kubectl get pods
-#kubectl logs mockapi-test-pod
+  backoffLimit: 0             # fail immediately if test fails
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mockapi-tests
+          image: mockapi-tests:latest
+          imagePullPolicy: Never  # use local image loaded into kind
+          command: ["bash", "ci/run_tests.sh"]
+          env:
+            - name: BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mockapi-env
+                  key: BASE_URL
+            - name: TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  name: mockapi-env
+                  key: API_TOKEN

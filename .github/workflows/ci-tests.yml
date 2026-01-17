@@ -1,0 +1,31 @@
+name: CI Tests (Docker)
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  docker-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        run: |
+          docker build -t mockapi-tests -f ci/Dockerfile .
+
+      - name: Run tests in Docker
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+        run: |
+          docker run --rm \
+            -e BASE_URL="$BASE_URL" \
+            -e TOKEN="$API_TOKEN" \
+            mockapi-tests

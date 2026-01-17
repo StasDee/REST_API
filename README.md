@@ -373,6 +373,109 @@ wsl bash ci/run_k8s_tests.sh
 ```
 ---
 
+## Running CI Tests in GitHub Actions
+
+This project has two types of CI workflows: **Docker tests** (automatic) and **Kubernetes tests** (manual).  
+
+---
+
+### **1. Docker CI Workflow**
+
+- **File:** `ci-tests.yml`
+- **Trigger:** On push to `main` branch or on pull requests
+- **Environment:** Runs inside a Docker container
+- **Automatic:** Runs automatically on push/PR
+- **Steps:**
+  1. Checkout the repository
+  2. Set up Docker Buildx
+  3. Build the test Docker image
+  4. Run tests inside the Docker container using secrets (`BASE_URL` and `API_TOKEN`)
+  
+Example of environment variables injected from GitHub Secrets:
+
+```bash
+docker run --rm \
+  -e BASE_URL="$BASE_URL" \
+  -e TOKEN="$API_TOKEN" \
+  mockapi-tests
+```
+
+### **2. Kubernetes CI Workflow**
+
+- **File:** `k8s-tests.yml`
+- **Trigger:** Manual via workflow_dispatch (can also be configured for push)
+- **Environment:** Local Kubernetes cluster created using kind
+- **Automatic:** Run manually from the Actions tab
+- **Steps:**
+  1. Set up kubectl and kind in the GitHub Actions runner
+  2. Build the test Docker image
+  3. Load the Docker image into the kind cluster
+  4. Create a ConfigMap from .env or GitHub Secrets
+  5. Run the Kubernetes Job (mockapi-test-job)
+  6. Stream logs and verify completion
+
+  #### **Manual trigger in GitHub:**
+  1. Go to Actions → CI Tests (Kubernetes)
+  2. Click Run workflow
+  3. Select branch (main) and click Run workflow
+
+  #### **3. Notes**
+  - **Docker CI**:
+    - Fast, automatic, runs on every push or PR.
+    - Environment variables are injected from GitHub Secrets.
+  
+  - **Kubernetes CI**:
+    - Simulates a production-like environment.
+    - Runs manually via GitHub Actions **workflow_dispatch**.
+    - Uses `kind` to spin up a local cluster and runs tests in a Job.
+  
+  - **Shared aspects**:
+    - Both workflows use the same `mockapi-tests` Docker image.
+    - Test scripts are identical (`ci/run_tests.sh`).
+
+  - **Secrets**:
+    - `BASE_URL` and `API_TOKEN` stored in GitHub Secrets.
+    - Avoids hardcoding credentials.
+
+
+ #### **4 Workflow Diagram**
+```text
+Push / Pull Request
+        │
+        ▼
+  +------------------+
+  |  Docker Workflow |
+  |  (ci-tests.yml)  |
+  +------------------+
+        │
+        │ Runs automatically
+        ▼
+  Docker container executes tests
+        │
+        ▼
+    Results / Logs
+─────────────────────────────
+Manual Kubernetes Workflow
+        │
+        ▼
+  +----------------------+
+  | Kubernetes Workflow  |
+  |  (k8s-tests.yml)     |
+  +----------------------+
+        │
+        │ Run manually via Actions
+        ▼
+ Local kind cluster spins up
+        │
+        ▼
+ Docker image loaded → Job runs tests
+        │
+        ▼
+    Results / Logs
+```
+
+--- 
+
 ## Execution Matrix (Single Source of Truth)
 
 > **Note:** For Docker, Kubernetes, and CI executions, `ci/run_tests.sh` is the single entrypoint

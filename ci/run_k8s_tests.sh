@@ -3,7 +3,7 @@ set -euo pipefail
 
 CLUSTER_NAME="mockapi-test-cluster"
 IMAGE_NAME="mockapi-tests"
-POD_NAME="mockapi-test-pod"
+JOB_NAME="mockapi-test-job"
 CONFIGMAP_NAME="mockapi-env"
 
 echo "🚀 Starting Kubernetes test run..."
@@ -52,23 +52,36 @@ kubectl delete configmap "$CONFIGMAP_NAME" --ignore-not-found
 kubectl create configmap "$CONFIGMAP_NAME" --from-env-file=.env
 
 # -----------------------------
-# Run test pod
+# Run test Job
 # -----------------------------
-echo "▶️ Running test pod..."
-kubectl delete pod "$POD_NAME" --ignore-not-found
-kubectl apply -f ci/mockapi_test_pod.yaml
+echo "▶️ Running test Job..."
+kubectl delete job "$JOB_NAME" --ignore-not-found
+kubectl apply -f ci/mockapi_test_job.yaml
 
 # -----------------------------
-# Stream logs
+# Wait for Job completion
 # -----------------------------
-echo "📜 Streaming logs..."
-kubectl wait --for=condition=Ready pod/"$POD_NAME" --timeout=60s || true
-kubectl logs -f "$POD_NAME" || true
+echo "⏳ Waiting for Job to finish..."
+kubectl wait --for=condition=complete job/"$JOB_NAME" --timeout=300s || true
 
 # -----------------------------
-# Final pod state
+# Show logs from the Job pod
 # -----------------------------
-echo "📊 Final pod status:"
-kubectl get pod "$POD_NAME"
+JOB_POD=$(kubectl get pods --selector=job-name="$JOB_NAME" -o jsonpath='{.items[0].metadata.name}')
+echo "📜 Test logs from pod $JOB_POD:"
+kubectl logs "$JOB_POD"
 
-echo "✅ Kubernetes test run finished"
+# -----------------------------
+# Final result check
+# -----------------------------
+JOB_SUCCEEDED=$(kubectl get job "$JOB_NAME" -o jsonpath='{.status.succeeded}')
+
+echo "📊 Job succeeded count: $JOB_SUCCEEDED"
+
+if [ "$JOB_SUCCEEDED" != "1" ]; then
+  echo "❌ Tests failed inside Kubernetes Job"
+  kubectl describe job "$JOB_NAME"
+  exit 1
+fi
+
+echo "✅ Kubernetes test run finished successfully"
