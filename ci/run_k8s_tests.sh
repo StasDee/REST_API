@@ -15,11 +15,6 @@ command -v kind >/dev/null || { echo "❌ kind not installed"; exit 1; }
 command -v kubectl >/dev/null || { echo "❌ kubectl not installed"; exit 1; }
 command -v docker >/dev/null || { echo "❌ docker not installed"; exit 1; }
 
-if [ ! -f ".env" ]; then
-  echo "❌ .env file not found (BASE_URL, API_TOKEN required)"
-  exit 1
-fi
-
 # -----------------------------
 # Create cluster (idempotent)
 # -----------------------------

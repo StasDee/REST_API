@@ -29,7 +29,7 @@ jobs:
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_TOKEN: ${{ secrets.API_TOKEN }}
-        run: |
+        run:
           docker run --rm \
             -e BASE_URL="$BASE_URL" \
             -e TOKEN="$API_TOKEN" \

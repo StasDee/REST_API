@@ -29,9 +29,9 @@ jobs:
           kubectl version --client
           kind --version
 
-      - name: Create .env file from secrets
+      - name: Create ConfigMap from secrets
         run: |
-          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
+          echo "BASE_URL=${{ secrets.BASE_URL }}" > .env
           echo "API_TOKEN=${{ secrets.API_TOKEN }}" >> .env
 
       - name: Run Kubernetes tests
