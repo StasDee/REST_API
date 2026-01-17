@@ -167,7 +167,7 @@ This project intentionally makes explicit design choices to mirror real-world ba
 │   ├── Dockerfile                                # Builds a deterministic test image│
     │── run_docker_tests.sh                       # Script to build and run tests in Docker from shell
 │   ├── run_tests.sh                              # Single entrypoint used everywhere
-│   └── mockapi_test_pod.yaml                          # Kubernetes Pod executing the same entrypoint
+│   └── mockapi_test_job.yaml                          # Kubernetes Pod executing the same entrypoint
 │
 ├── __init__.py                                   # Package initialization
 ├── .env                                          # Environment variables (Sensitive)
@@ -345,21 +345,21 @@ kubectl get configmap mockapi-env -o yaml
 5. Run the pod and check logs:
 
 ```bash
-kubectl apply -f ci/mockapi_test_pod.yaml
-kubectl logs -f mockapi-test-pod
+kubectl apply -f ci/mockapi_test_job.yaml
+kubectl logs -f mockapi-test-job
 ```
 
 6. Clean up:
 
 ```bash
-kubectl delete pod mockapi-test-pod
+kubectl delete pod mockapi-test-job
 kind delete cluster --name mockapi-test-cluster
 ```
 
 7. To verify fail reason:
 
 ```bash
-kubectl describe pod mockapi-test-pod
+kubectl describe pod mockapi-test-job
 ```
 
 Or use the helper script:
